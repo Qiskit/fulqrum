@@ -1,5 +1,5 @@
 cython>=3.0.5
-ruff<0.16
+ruff
 jupyter
 jupyter-sphinx
 matplotlib
