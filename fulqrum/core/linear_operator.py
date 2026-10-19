@@ -69,7 +69,7 @@ class SubspaceHamiltonian(LinearOperator):
                 # Default changed from 4 to 2 as it is empirically faster.
                 # User can override using FQ_LADDER_WIDTH env flag.
                 self.off_H.group_term_sort_by_ladder_int(
-                    int(os.environ.get("FQ_LADDER_WIDTH", 2))
+                    int(os.environ.get("FQ_LADDER_WIDTH", "2"))
                 )
                 self.group_ladder_ptrs = self.off_H.group_ladder_bin_starts()
 
