@@ -14,5 +14,6 @@ pytest
 pytest-benchmark
 qiskit-nature>=0.7.2
 qiskit-sphinx-theme
-qiskit>=1.2
+qiskit>=1.2 
+qiskit>=1.2,!=2.6.0; sys_platform == "linux" 
 Sphinx
