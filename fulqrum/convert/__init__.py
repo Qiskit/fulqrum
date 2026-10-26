@@ -22,6 +22,8 @@ from .qiskit import (
 )
 from .integrals import integrals_to_fq_fermionic_op, fcidump_to_fq_fermionic_op
 
+from .fcidump import read_fcidump
+
 __all__ = [
     "openfermion_fermi_op_to_fulqrum",
     "openfermion_qubit_op_to_fulqrum",
@@ -29,4 +31,5 @@ __all__ = [
     "qiskit_nature_fermi_op_to_fulqrum",
     "integrals_to_fq_fermionic_op",
     "fcidump_to_fq_fermionic_op",
+    "read_fcidump",
 ]

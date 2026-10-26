@@ -83,6 +83,7 @@ typedef struct FermionicOperator
                 FermionicTerm(std::get<0>(tdata), std::get<1>(tdata), std::get<2>(tdata)));
         }
     }
+    static FermionicOperator from_fcidump(std::string filename, double tol);
     /**
      * Print object to standard output stream
      */
@@ -491,4 +492,17 @@ inline void set_fermi_sorting_flags(FermionicOperator& oper, std::string kind)
     {
         throw std::runtime_error("Invalid sorting type.");
     }
+}
+
+#include "../../convert/src/fcidump.hpp"
+#include "../../convert/src/integrals.hpp"
+inline FermionicOperator FermionicOperator::from_fcidump(std::string filename, double tol = 1e-12)
+{
+    FCIDumpData_t data = parse_fcidump(filename);
+    int norb = data.NORB;
+    int norb2 = norb * norb;
+    std::vector<double> two_body_ints = data.two_body_integrals(true);
+    FermionicOperator out = pyscf_integrals_to_fermionic(
+        &data.H1[0], &two_body_ints[0], norb2, norb2 * norb2, data.ECORE, tol);
+    return out;
 }

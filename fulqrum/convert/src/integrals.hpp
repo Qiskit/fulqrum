@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "../../core/src/constants.hpp"
 #include "../../core/src/fermi_oper.hpp"
 
 inline std::size_t _flat_index2d(width_t i, width_t j, width_t dim)

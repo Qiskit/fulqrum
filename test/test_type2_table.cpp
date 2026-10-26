@@ -4,6 +4,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <filesystem>
 
 typedef std::complex<double> complex;
 
@@ -337,7 +338,8 @@ TEST_CASE("Direct groups of a molecular operator hold only ladder operators and 
     // the property, instead of only confirming that synthetic bad groups get rejected.
     //
     // The path is relative, therefore run the test binary from the repository root.
-    FermionicOperator fop = FermionicOperator::from_json("test/data/lih.json");
+    std::filesystem::path cwd = std::filesystem::current_path();
+    FermionicOperator fop = FermionicOperator::from_json(cwd.parent_path() / "fulqrum/fulqrum/test/data/lih.json");
     QubitOperator op = fop.extended_jw_transformation();
     QubitOperator diag, off;
     std::tie(diag, off) = op.split_diagonal();

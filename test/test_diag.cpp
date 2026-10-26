@@ -15,12 +15,14 @@
 #include "fulqrum.hpp"
 #include <complex>
 #include <vector>
+#include <filesystem>
 
 typedef std::complex<double> complex;
 
 TEST_CASE("Test diag fast mode compatibility check")
 {
-    FermionicOperator_t fop = FermionicOperator::from_json("test/data/lih.json");
+    std::filesystem::path cwd = std::filesystem::current_path();
+    FermionicOperator_t fop = FermionicOperator::from_json(cwd.parent_path() / "fulqrum/fulqrum/test/data/lih.json");
     QubitOperator_t op = fop.extended_jw_transformation();
     CHECK(!fast_diag_compatible(op));
     auto [diag, off] = op.split_diagonal();
@@ -31,7 +33,8 @@ TEST_CASE("Test diag fast mode compatibility check")
 
 TEST_CASE("Test diag fast mode term sorting")
 {
-    FermionicOperator_t fop = FermionicOperator::from_json("test/data/lih.json");
+    std::filesystem::path cwd = std::filesystem::current_path();
+    FermionicOperator_t fop = FermionicOperator::from_json(cwd.parent_path() / "fulqrum/fulqrum/test/data/lih.json");
     QubitOperator_t op = fop.extended_jw_transformation();
     auto [diag, off] = op.split_diagonal();
     diag = diag.remove_constant_terms();

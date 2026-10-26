@@ -9,6 +9,7 @@
 # Any modifications or derivative works of this code must retain this
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
+# cython: c_string_type=unicode, c_string_encoding=UTF-8
 
 """PySCF conversion utilities"""
 
@@ -16,6 +17,7 @@ from pathlib import Path
 import time
 import numpy as np
 from ..core.fermi_operator cimport FermionicOperator
+from ..convert.fcidump cimport FCIDumpData, parse_fcidump
 
 import logging
 logger = logging.getLogger(__name__)
@@ -58,33 +60,26 @@ def integrals_to_fq_fermionic_op(double_or_complex[:,::1] one_body_integrals, do
     return fop
 
 
-def fcidump_to_fq_fermionic_op(fcidump_path: str | Path) -> FermionicOperator:
+def fcidump_to_fq_fermionic_op(fcidump_path: str | Path, double EQ_TOLERANCE=1e-12) -> FermionicOperator:
     """Load one- and two-body integrals as numpy arrays into Fulqrum
         fermionic operator from FCIDUMP file.
 
     Parameters:
         fcidump_path (str | Path): The FCIDUMP file.
+        EQ_TOLERANCE (float): Equality tolerance.
 
     Returns:
         FermionicOperator: Converted operator.
     """
     logger.info("Starting import of FCIDump file")
-    from pyscf import ao2mo, tools
-    scf_start = time.perf_counter()
-    mf_as = tools.fcidump.to_scf(fcidump_path)
-    hcore = mf_as.get_hcore()
-    num_spatial_orbitals = hcore.shape[0]
-    eri = ao2mo.restore(1, mf_as._eri, num_spatial_orbitals)
-    nuclear_repulsion_energy = mf_as.mol.energy_nuc()
-    scf_stop = time.perf_counter()
-    logger.info("PySCF load time: %s ms", round((scf_stop - scf_start) * 1000, 3))
-
-    st = time.perf_counter()
-    cdef FermionicOperator out = integrals_to_fq_fermionic_op(
-        one_body_integrals=hcore,
-        two_body_integrals=eri,
-        constant=nuclear_repulsion_energy,
-    )
-    ft = time.perf_counter()
-    logger.info("Integrals to FermionicOperator time: %s ms", round((ft - st) * 1000, 3))
-    return out
+    cdef double st = time.perf_counter()
+    cdef FCIDumpData data = FCIDumpData(str(fcidump_path))
+    cdef int norb = data.NORB
+    cdef int norb2 = norb * norb
+    cdef FermionicOperator fop = FermionicOperator(2*norb)
+    cdef vector[double] two_body_ints = data.two_body_integrals(1)
+    fop.oper = pyscf_integrals_to_fermionic[double](&data.data.H1[0], &two_body_ints[0], norb2, norb2 * norb2,
+                                                                      data.ECORE, EQ_TOLERANCE)
+    cdef double ft = time.perf_counter()
+    logger.info("FCIDump to FermionicOperator time: %s ms", round((ft - st) * 1000, 3))
+    return fop

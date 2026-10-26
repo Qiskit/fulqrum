@@ -5,6 +5,7 @@ jupyter-sphinx
 matplotlib
 nbsphinx
 openfermion
+pyscf
 primme
 pycodestyle
 pydata_sphinx_theme
