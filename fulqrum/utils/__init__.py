@@ -28,4 +28,4 @@ IO
 from .matrix import kron_str, qubitoperator_to_matrix
 from .io import dict_to_json, json_to_dict
 
-__all__ = ["kron_str", "qubitoperator_to_matrix", "dict_to_json", "json_to_dict"]
+__all__ = ["dict_to_json", "json_to_dict", "kron_str", "qubitoperator_to_matrix"]

@@ -23,27 +23,27 @@ from .core import (
     Bitset,
 )
 
-import fulqrum.core.constants as constants
+from fulqrum.core import constants
 
 __all__ = [
+    "Bitset",
+    "FermionicOperator",
     "QubitOperator",
     "Subspace",
     "SubspaceHamiltonian",
-    "FermionicOperator",
-    "Bitset",
     "constants",
 ]
 
 
 def about():
     """About Fulqrum"""
-    print("")
+    print()
     print("███████ ██    ██ ██       ██████  ██████  ██    ██   ████    ████")
     print("██      ██    ██ ██      ██    ██ ██   ██ ██    ██  ██  ██  ██  ██")
     print("█████   ██    ██ ██      ██    ██ ██████  ██    ██ ██    ████    ██")
     print("██      ██    ██ ██      ██ ▄▄ ██ ██   ██ ██    ██ ██    ████    ██")
     print("██       ██████  ███████  ██████  ██   ██  ██████  ██    ████    ██")
-    print("")
+    print()
     print("(C) Copyright IBM 2024")
     print("Paul D. Nation, Abdullah Saki, and Hwajung Kang")
     print(f"Fulqrum version: {__version__}")

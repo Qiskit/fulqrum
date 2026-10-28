@@ -65,11 +65,11 @@ from .linear_operator import (
 )
 
 __all__ = [
-    "QubitOperator",
-    "FermionicOperator",
     "Bitset",
+    "CSRLikeLinearOperator",
+    "CSRLinearOperator",
+    "FermionicOperator",
+    "QubitOperator",
     "Subspace",
     "SubspaceHamiltonian",
-    "CSRLinearOperator",
-    "CSRLikeLinearOperator",
 ]
