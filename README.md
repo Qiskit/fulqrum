@@ -1,11 +1,11 @@
 
-![](https://raw.githubusercontent.com/qiskit-community/fulqrum/main/docs/images/fulqrum_logo.png)
+![](https://raw.githubusercontent.com/Qiskit/fulqrum/main/docs/images/fulqrum_logo.png)
 
 # Fulqrum
 
-![GitHub Release](https://img.shields.io/github/v/release/qiskit-community/fulqrum)
+![GitHub Release](https://img.shields.io/github/v/release/Qiskit/fulqrum)
 ![PyPI Downloads](https://img.shields.io/pypi/dm/fulqrum)
-![GitHub License](https://img.shields.io/github/license/qiskit-community/fulqrum)
+![GitHub License](https://img.shields.io/github/license/Qiskit/fulqrum)
 
 A generalized framework for quantum subspace eigensolving.
 
@@ -16,7 +16,7 @@ In addition to eigensolving itself, Fulqrum provides tools for generating compac
 
 ## Documentation
 
-Docs: https://qiskit-community.github.io/fulqrum
+Docs: https://qiskit.github.io/fulqrum
 
 
 ## Installation
@@ -34,14 +34,14 @@ Fulqrum uses [`qiskit-addon-sqd-hpc`](https://github.com/Qiskit/qiskit-addon-sqd
 
 Clone Fulqrum with `--recurse-submodules` flag, and it will also clone files from the submodule.
 ```bash
-git clone --recurse-submodules https://github.com/qiskit-community/fulqrum.git
+git clone --recurse-submodules https://github.com/Qiskit/fulqrum.git
 ```
 
 OR
 
 After cloning Fulqrum normally, do a submodule update.
 ```bash
-git clone https://github.com/qiskit-community/fulqrum.git
+git clone https://github.com/Qiskit/fulqrum.git
 cd fulqrum
 git submodule update --init --recursive
 ```

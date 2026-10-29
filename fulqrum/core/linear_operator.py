@@ -240,7 +240,7 @@ class CSRLinearOperator(LinearOperator):
         self.is_real = is_real
         super().__init__(shape=matrix.shape, dtype=float if self.is_real else complex)
         # scipy >= 1.18 can throw error without it.
-        # See: https://github.com/qiskit-community/fulqrum/issues/67
+        # See: https://github.com/Qiskit/fulqrum/issues/67
         self._matvec = self.matvec
 
     @property

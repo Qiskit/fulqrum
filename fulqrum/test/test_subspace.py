@@ -191,7 +191,7 @@ def test_bitset_dict():
 def test_half_strs_mode_globally_ascending():
     """Test that half-string mode produces globally ascending insertion order.
 
-    Regression test for https://github.com/qiskit-community/fulqrum/issues/19.
+    Regression test for https://github.com/Qiskit/fulqrum/issues/19.
     Uses alpha and beta lists of different lengths (3 vs 2) so that any
     incorrect product/concat ordering shows up. Earlier tests with identical
     halves accidentally masked the bug.
