@@ -69,3 +69,4 @@ As shown below, a typical eigenvalue problem is broken up into three pieces: 1) 
     Core <apidocs/core>
     Utilities <apidocs/utils>
     RAMPS <apidocs/ramps>
+    SQD addon support <apidocs/addon_sqd_support>
