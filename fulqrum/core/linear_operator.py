@@ -33,9 +33,6 @@ class SubspaceHamiltonian(LinearOperator):
     evaluation.
     """
 
-    # The subclass will complain if this is not here
-    _matvec = None
-
     def __init__(self, hamiltonian, subspace=None):
         """A SciPy `LinearOperator` that represents a Hamiltonian restricted to the given
         subspace.
@@ -83,7 +80,6 @@ class SubspaceHamiltonian(LinearOperator):
             self.group_ptrs,
             self.group_ladder_ptrs,
         )
-        self._matvec = self.matvec
         super().__init__(
             shape=(len(subspace),) * 2,
             dtype=np.dtype(float) if self.spmv.is_real else np.dtype(complex),
@@ -202,6 +198,9 @@ class SubspaceHamiltonian(LinearOperator):
         logger.info("Matvec time: %s ms", round((stop - start) * 1000, 3))
         return out
 
+    def _matvec(self, x):
+        return self.matvec(x)
+
     def to_csr_linearoperator(self):
         """Convert subspace Hamiltonian to a LinearOperator wrapping a CSR matrix
 
@@ -230,8 +229,6 @@ class SubspaceHamiltonian(LinearOperator):
 
 
 class CSRLinearOperator(LinearOperator):
-    _matvec = None
-
     def __init__(self, matrix, is_real=0):
         """A SciPy `LinearOperator` wrapper for a CSR array.  Allows for parallel
         computation of the sparse-matrix vector product needed for eigensolving.
@@ -239,9 +236,6 @@ class CSRLinearOperator(LinearOperator):
         self.matrix = matrix
         self.is_real = is_real
         super().__init__(shape=matrix.shape, dtype=float if self.is_real else complex)
-        # scipy >= 1.18 can throw error without it.
-        # See: https://github.com/Qiskit/fulqrum/issues/67
-        self._matvec = self.matvec
 
     @property
     def nnz(self):
@@ -291,10 +285,11 @@ class CSRLinearOperator(LinearOperator):
             out = out.view().reshape(x.shape[0], 1)
         return out
 
+    def _matvec(self, x):
+        return self.matvec(x)
+
 
 class CSRLikeLinearOperator(LinearOperator):
-    _matvec = None
-
     def __init__(self, csrlike):
         """A SciPy `LinearOperator` wrapper for a CSR like object consisting of a vector of objects,
         each comprised of two vectors for column indices and data .  Can be quickly converted to a CSR array,
@@ -304,7 +299,6 @@ class CSRLikeLinearOperator(LinearOperator):
         self.csrlike = csrlike
         self.is_real = csrlike.is_real
         super().__init__(shape=csrlike.shape, dtype=float if self.is_real else complex)
-        self._matvec = self.matvec
 
     def to_csr_array(self, verbose=False):
         return self.csrlike.to_csr_array(verbose)
@@ -356,3 +350,6 @@ class CSRLikeLinearOperator(LinearOperator):
         if col_vec:
             out = out.view().reshape(x.shape[0], 1)
         return out
+
+    def _matvec(self, x):
+        return self.matvec(x)
