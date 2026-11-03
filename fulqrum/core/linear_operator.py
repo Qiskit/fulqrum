@@ -33,9 +33,6 @@ class SubspaceHamiltonian(LinearOperator):
     evaluation.
     """
 
-    # The subclass will complain if this is not here
-    _matvec = None
-
     def __init__(self, hamiltonian, subspace=None):
         """A SciPy `LinearOperator` that represents a Hamiltonian restricted to the given
         subspace.

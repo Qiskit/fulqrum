@@ -70,9 +70,14 @@ def test_csr_linops_free_by_ref():
     hsub.update_subspace(fq.Subspace([strs, strs]))
 
     gc.disable()
-    for method in ("to_csr_linearoperator", "to_csr_linearoperator_fast"):
-        op = getattr(hsub, method)()
-        ref = weakref.ref(op)
-        del op
+    try:
+        for method in ("to_csr_linearoperator", "to_csr_linearoperator_fast"):
+            op = getattr(hsub, method)()
+            ref = weakref.ref(op)
+            del op
+            assert ref() is None
+        ref = weakref.ref(hsub)
+        del hsub
         assert ref() is None
-    gc.enable()
+    finally:
+        gc.enable()
