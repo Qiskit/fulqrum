@@ -1,0 +1,85 @@
+﻿fulqrum.core.FermionicOperator
+==============================
+
+.. currentmodule:: fulqrum.core
+
+.. autoclass:: FermionicOperator
+   :members:
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+            ~FermionicOperator.append
+         
+      
+            ~FermionicOperator.coefficients
+         
+      
+            ~FermionicOperator.combine_repeat_indices
+         
+      
+            ~FermionicOperator.combine_repeat_terms
+         
+      
+            ~FermionicOperator.copy
+         
+      
+            ~FermionicOperator.extended_jw_transformation
+         
+      
+            ~FermionicOperator.from_dict
+         
+      
+            ~FermionicOperator.from_fcidump
+         
+      
+            ~FermionicOperator.from_json
+         
+      
+            ~FermionicOperator.from_label
+         
+      
+            ~FermionicOperator.offdiag_structure_ptrs
+         
+      
+            ~FermionicOperator.offdiag_structure_sort
+         
+      
+            ~FermionicOperator.offdiag_structures
+         
+      
+            ~FermionicOperator.proj_structures
+         
+      
+            ~FermionicOperator.size
+         
+      
+            ~FermionicOperator.to_dict
+         
+      
+            ~FermionicOperator.to_json
+         
+      
+            ~FermionicOperator.weight_sort
+         
+      
+            ~FermionicOperator.weights
+         
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~FermionicOperator.coeff
+      ~FermionicOperator.operators
+      ~FermionicOperator.width
+   
+   

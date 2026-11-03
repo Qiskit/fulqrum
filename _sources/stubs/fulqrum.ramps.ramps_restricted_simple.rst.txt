@@ -1,0 +1,6 @@
+﻿fulqrum.ramps.ramps\_restricted\_simple
+=======================================
+
+.. currentmodule:: fulqrum.ramps
+
+.. autofunction:: ramps_restricted_simple

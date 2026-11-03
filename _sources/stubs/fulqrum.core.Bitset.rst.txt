@@ -1,0 +1,62 @@
+﻿fulqrum.core.Bitset
+===================
+
+.. currentmodule:: fulqrum.core
+
+.. autoclass:: Bitset
+   :members:
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+            ~Bitset.all
+         
+      
+            ~Bitset.any
+         
+      
+            ~Bitset.count
+         
+      
+            ~Bitset.empty
+         
+      
+            ~Bitset.find_first
+         
+      
+            ~Bitset.find_next
+         
+      
+            ~Bitset.flip
+         
+      
+            ~Bitset.ladder_int
+         
+      
+            ~Bitset.none
+         
+      
+            ~Bitset.num_blocks
+         
+      
+            ~Bitset.offdiag_flip
+         
+      
+            ~Bitset.size
+         
+      
+            ~Bitset.to_int
+         
+      
+            ~Bitset.to_string
+         
+      
+   
+   
+
+   
+   
+   

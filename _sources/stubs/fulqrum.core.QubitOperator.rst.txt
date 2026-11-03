@@ -1,0 +1,153 @@
+﻿fulqrum.core.QubitOperator
+==========================
+
+.. currentmodule:: fulqrum.core
+
+.. autoclass:: QubitOperator
+   :members:
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+            ~QubitOperator.append
+         
+      
+            ~QubitOperator.coefficients
+         
+      
+            ~QubitOperator.combine_repeat_terms
+         
+      
+            ~QubitOperator.constant_energy
+         
+      
+            ~QubitOperator.copy
+         
+      
+            ~QubitOperator.fast_diag_compatible
+         
+      
+            ~QubitOperator.fast_diag_term_sort
+         
+      
+            ~QubitOperator.from_constant
+         
+      
+            ~QubitOperator.from_dict
+         
+      
+            ~QubitOperator.from_json
+         
+      
+            ~QubitOperator.from_label
+         
+      
+            ~QubitOperator.group_ladder_bin_starts
+         
+      
+            ~QubitOperator.group_offdiag_indices
+         
+      
+            ~QubitOperator.group_ptrs
+         
+      
+            ~QubitOperator.group_rowint_length
+         
+      
+            ~QubitOperator.group_sort
+         
+      
+            ~QubitOperator.group_term_sort_by_ladder_int
+         
+      
+            ~QubitOperator.groups
+         
+      
+            ~QubitOperator.is_diagonal
+         
+      
+            ~QubitOperator.is_real
+         
+      
+            ~QubitOperator.ladder_ints
+         
+      
+            ~QubitOperator.matrix_element
+         
+      
+            ~QubitOperator.offdiag_structures
+         
+      
+            ~QubitOperator.offdiag_weight_ptrs
+         
+      
+            ~QubitOperator.offdiag_weight_sort
+         
+      
+            ~QubitOperator.offdiag_weights
+         
+      
+            ~QubitOperator.proj_structures
+         
+      
+            ~QubitOperator.projector_oper_validation
+         
+      
+            ~QubitOperator.real_phases
+         
+      
+            ~QubitOperator.remove_constant_terms
+         
+      
+            ~QubitOperator.set_type
+         
+      
+            ~QubitOperator.size
+         
+      
+            ~QubitOperator.split_diagonal
+         
+      
+            ~QubitOperator.terms_by_group
+         
+      
+            ~QubitOperator.to_dict
+         
+      
+            ~QubitOperator.to_json
+         
+      
+            ~QubitOperator.weight_sort
+         
+      
+            ~QubitOperator.weights
+         
+      
+            ~QubitOperator.worst_case_offdiag_group_amplitudes
+         
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~QubitOperator.coeff
+      ~QubitOperator.dtype
+      ~QubitOperator.ladder_width
+      ~QubitOperator.num_groups
+      ~QubitOperator.off_weight_sorted
+      ~QubitOperator.operators
+      ~QubitOperator.proj_indices
+      ~QubitOperator.sorted
+      ~QubitOperator.type
+      ~QubitOperator.weight_sorted
+      ~QubitOperator.width
+   
+   

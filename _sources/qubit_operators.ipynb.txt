@@ -1,0 +1,745 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "aee6880a-d666-42a9-8267-2774cfc9da0e",
+   "metadata": {},
+   "source": [
+    "# Using QubitOperators\n",
+    "\n",
+    "One of the two core data structures used by Fulqrum is the ``QubitOperator`` that represents Hamiltonians defined\n",
+    "over qubit subsystems.  Here we will go through examples of the core ``QubitOperator`` functionality that is pertinent\n",
+    "to most use cases.  To begin, we will import fulqrum:  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3834acb2-579c-4f13-b1d6-d12c876e98eb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import fulqrum as fq"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2294e9f7-5176-49d3-9004-74ed0b7d74fb",
+   "metadata": {},
+   "source": [
+    "## Single-term operators"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f93a937b-f89d-44b9-8db6-8945c02f466e",
+   "metadata": {},
+   "source": [
+    "Create an empty operator over 5 qubits:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "b814a8b7-eb0c-4791-bfc4-0bb1f1d88d35",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[], width=5>"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "fq.QubitOperator(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "adbce60f-3546-4981-ab52-a3606004af88",
+   "metadata": {},
+   "source": [
+    "Create a `N` qubit single-term operator from a dense (including identity operators) string, where `N` is equal to the length of the string:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "a2a17ef2-85de-4b94-8050-135205e34e92",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('Y:1 X:2', (1+0j))], width=5, extended=0, group=-1>"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "fq.QubitOperator.from_label(\"IIXYI\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8b81a790-602b-4cf2-880b-3f787e07bea9",
+   "metadata": {},
+   "source": [
+    "Create a 5 qubit, single-term operator using sparse notion specifying an `X` operator on qubit `0` and a `1` operator on qubit `3`, and with a coefficient of `2.2`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "0fa1f168-8a57-436a-80dd-4c04b81505ab",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('X:0 1:3', (2.2+0j))], width=5, extended=1, group=-1>"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H = fq.QubitOperator(5, [(\"X1\", [0, 3], 2.2)])\n",
+    "H"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ed65b3b4-a809-4cbc-87d5-dd09ef165ce0",
+   "metadata": {},
+   "source": [
+    "Check the properties of the `QubitOperator`.  Number of qubits:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "976ffe64-a4b2-48f4-b472-044413b9fd4d",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H.width"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "45e5f999-0af0-4894-a398-244be4b1548f",
+   "metadata": {},
+   "source": [
+    "Number of terms:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0b4ac464-687a-4ffa-a88b-aece906b0f35",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H.size()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c83bd5f3-4704-4114-94fe-d270008fedef",
+   "metadata": {},
+   "source": [
+    "or the number of terms can be found as:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "9209b5e2-b11e-4766-a3a0-de6509b61740",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(H)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "318db23b-979b-47d0-aeda-02d0a71bfaf2",
+   "metadata": {},
+   "source": [
+    "## Multi-term operators"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "009f9c48-a32f-4708-b623-4b68be551703",
+   "metadata": {},
+   "source": [
+    "Create a multi-term `QubitOperator` using the sparse notion:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "cf6f881d-9c9a-4cd0-9c2e-2071ec88aa62",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('X:0 1:3', (2.2+0j)), ('Z:0 Z:1 Y:4', (-1+0j))], width=5>"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H = fq.QubitOperator(5, [(\"X1\", [0, 3], 2.2), (\"ZZY\", [0, 1, 4], -1)])\n",
+    "H"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "473ad20b-43d8-4bce-9ba1-94f62cec1f10",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "2"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H.size()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "434218eb-f90a-4868-99de-f64afa5c14e4",
+   "metadata": {},
+   "source": [
+    "Create a multi-term operator by adding one operator to another, returning a new operator:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "239d184f-c400-4eb4-8924-f05410b88447",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('Y:1 X:2 Z:4', (2+0j)), ('Z:0 Z:1 Z:3 Z:4', (-1+0j))], width=5>"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H1 = fq.QubitOperator.from_label(\"ZIXYI\", 2)\n",
+    "H2 = fq.QubitOperator(5, [(\"ZZIZZ\", range(5), -1.0)])\n",
+    "H1 + H2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "edf29d12-c587-459e-97a3-8ffacec72d15",
+   "metadata": {},
+   "source": [
+    "Create a multi-term operator by adding an operator in-place to an existing operator:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "6cb7c0fd-4800-4e8c-a6f5-e72a480d8b38",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('Y:1 X:2 Z:4', (2+0j)), ('Z:0 Z:1 Z:3 Z:4', (-1+0j))], width=5>"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H1 += H2\n",
+    "H1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "21b55ec0-0c2a-4375-ab07-6f2ff84caa99",
+   "metadata": {},
+   "source": [
+    "## Operator splitting\n",
+    "\n",
+    "Often times it is of interest to decompose an operator into its diagonal and off-diagonal components.  For example, consider th following lattice Hamiltonian:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "e49b75af-7296-4a7e-97cb-cb3bfef30a0c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.transpiler import CouplingMap\n",
+    "\n",
+    "# Build 16-qubit coupling map\n",
+    "N = 4\n",
+    "cmap = CouplingMap.from_grid(N, N)\n",
+    "num_qubits = cmap.size()\n",
+    "num_edges = 2 * N * (N - 1)\n",
+    "\n",
+    "# Generate Hamiltonian\n",
+    "H = fq.QubitOperator(num_qubits, [])\n",
+    "touched_edges = set({})\n",
+    "coeffs = [-1 / 2, -1 / 2, -1]\n",
+    "for edge in cmap.get_edges():\n",
+    "    if edge[::-1] not in touched_edges:\n",
+    "        touched_edges.add(edge)\n",
+    "        H += fq.QubitOperator(\n",
+    "            num_qubits,\n",
+    "            [(\"XX\", edge, coeffs[0]), (\"YY\", edge, coeffs[1]), (\"ZZ\", edge, coeffs[2])],\n",
+    "        )"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ebbb4ed3-6bfd-4125-80fa-3c4f04d1e4e9",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "72"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H.size()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cd7d7b0b-322e-4f4c-bc40-3710f0aad555",
+   "metadata": {},
+   "source": [
+    "The operator consists of a collection of diagonal terms (`ZZ`) and off-diagonal terms (`XX` or `YY`).  We can split these comtributions into their respective pieces:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "3bbbfe89-fae1-4fcf-ad16-ace1a7900dfc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "diag_H, offdiag_H = H.split_diagonal()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "33d5dbe5-964f-4ce8-991b-47b419f5ab26",
+   "metadata": {},
+   "source": [
+    "The number of diagonal terms should be half that of the off-diagonal terms:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "83bd34ea-d4c6-4778-b6d3-9f3b07d2c4c4",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "24"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "diag_H.size()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5191152c-7404-4580-af3a-c6edcce7c5be",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "48"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "offdiag_H.size()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7a7f5642-8694-4e57-94f1-cacf1ed66865",
+   "metadata": {},
+   "source": [
+    "We can of course inspect the operators to see that the splitting works, e.g. for the diagonal component:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "8148ba98-6af6-4d91-b9e6-beebe2297869",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('Z:0 Z:4', (-1+0j)), ('Z:0 Z:1', (-1+0j)), ('Z:1 Z:5', (-1+0j)), ('Z:1 Z:2', (-1+0j)), ('Z:2 Z:6', (-1+0j)), ('Z:2 Z:3', (-1+0j)), ('Z:3 Z:7', (-1+0j)), ('Z:4 Z:8', (-1+0j)), ('Z:4 Z:5', (-1+0j)), ('Z:5 Z:9', (-1+0j)), ('Z:5 Z:6', (-1+0j)), ('Z:6 Z:10', (-1+0j)), ('Z:6 Z:7', (-1+0j)), ('Z:7 Z:11', (-1+0j)), ('Z:8 Z:12', (-1+0j)), ('Z:8 Z:9', (-1+0j)), ('Z:9 Z:13', (-1+0j)), ('Z:9 Z:10', (-1+0j)), ('Z:10 Z:14', (-1+0j)), ('Z:10 Z:11', (-1+0j)), ('Z:11 Z:15', (-1+0j)), ('Z:12 Z:13', (-1+0j)), ('Z:13 Z:14', (-1+0j)), ('Z:14 Z:15', (-1+0j))], width=16>"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "diag_H"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a6675e1e-516c-47b6-87eb-a71e2b55e072",
+   "metadata": {},
+   "source": [
+    "## Operator groups\n",
+    "\n",
+    "\"Groups\" represent one of the fundamental properties of an operator for eigensolving.  A *group* consists of all terms that share the same *off-diagonal structure*, i.e. terms that have off-diagonal operators, e.g. `X`, `Y`, `+`, or `-`, on the same qubit indices.  We can see the number of groups easily:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "f8ebb76b-4357-4829-a615-481628876c6d",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "25"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H.num_groups"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8b05372c-602c-475a-8583-5509558b36f7",
+   "metadata": {},
+   "source": [
+    "In this case we have a single group that contains all the diagonal components, i.e. the off-diagonal structure is trivial since they are diagonal, and then 24 more groups, each one corresponding to `XX` and `YY` on each of the 24 edges in the graph.  We can verify this using the split operator pieces from before:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "6e5d7239-5b3e-4834-9704-0eb982c44d05",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "diag_H.num_groups"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "717fd46b-8bd5-44c3-b93f-5da22bd73efa",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "24"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "offdiag_H.num_groups"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7349350f-daf2-4c66-889e-7e31861d7191",
+   "metadata": {},
+   "source": [
+    "The importance of groups of terms come from the fact that, **for a given row, each group represents a matrix-element in the Hamiltonian**.  We see that the diagonal Hamiltonian has a single group, indicating the obvious fact that a diagonal must have a single matrix element per row.  The off-diagonal Hamiltonian has 24 groups, and thus we can expect at most 24 off-diagonal elements per row. The \"at most\" here represents the fact that, in a subspace, not all matrix-elements need be found within the subspace.  That there are 48 total terms in the off-diagonal operator, but only 24 groups is due to the fact that each group is comprised of the `XX` and `YY` terms on each edge of the graph.\n",
+    "\n",
+    "We can slice the Hamiltonian by computing the group pointers, indicating the start and stop indices of terms within each group:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "f76dee45-b288-4b3b-8f52-022385f65441",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32,\n",
+       "       34, 36, 38, 40, 42, 44, 46, 48], dtype=uint64)"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "group_ptrs = offdiag_H.group_ptrs()\n",
+    "group_ptrs"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2f5a342e-84e9-4611-a1bc-b6203d0f11b2",
+   "metadata": {},
+   "source": [
+    "We see that, for example, the 0th group starts with term `0` and goes to term `2`, ie. terms `0` and `1` are in the group.  We can slice the operator to see this:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "5bc8b1d6-22ef-4c7f-beed-34304322d565",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<QubitOperator[('X:0 X:1', (-0.5+0j)), ('Y:0 Y:1', (-0.5+0j))], width=16>"
+      ]
+     },
+     "execution_count": 22,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "offdiag_H[0:2]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4705cd88-fe48-48a2-be69-422936fda2df",
+   "metadata": {},
+   "source": [
+    "showing that indeed, the group is made up of `XX` and `YY` terms on the `[0, 1]` edge of the graph.  Other groups are similar."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d972548a-a24b-4845-ba42-c4e34da3d464",
+   "metadata": {},
+   "source": [
+    "## Removing constants from an operator\n",
+    "\n",
+    "Physics says that it is always possible to add a constant energy to the Hamiltonian.  This has the effect of shifting all of the operator eigenenergies, but does not change the energy splittings.  It is best to remove this constant before eigensolving.  Let us add a constant to our lattice Hamiltonian"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "6609a5cc-c8e0-4ce7-8466-f2e9aea0c7a8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Hc = fq.QubitOperator.from_constant(H.width, 100)\n",
+    "Hc += H"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a8a5ea71-1058-4b9f-8e22-f65497a7a922",
+   "metadata": {},
+   "source": [
+    "We not only want to remove the constant term, but would also like to return the energy value as well, e.g. to add back later:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "1d9e8ba0-36d5-4be4-b150-7c6ac6942dff",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "100.0"
+      ]
+     },
+     "execution_count": 26,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H0, constant_energy = Hc.remove_constant_terms()\n",
+    "constant_energy"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0a29e502-8d28-489a-922a-6cedc7b4cb5f",
+   "metadata": {},
+   "source": [
+    "We can verify that `H0` has no constant energy remaining:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "d6e3e74c-4a35-404b-b8f2-488e9ecee2b6",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.0"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "H0.constant_energy()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0e42fc4a-f610-4c38-bc03-1d19c5e4612e",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

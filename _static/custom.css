@@ -1,0 +1,34 @@
+/* -------------------- THEME OVERRIDES -------------------- */
+
+html[data-theme="light"] {
+    --pst-color-background: #F7F7F7;
+    --pst-color-primary: #0073ff;
+    --pst-color-secondary: #ff8c00;
+    --pst-color-plot-background: rgb(255, 255, 255);
+    --pst-color-on-background: #e4e4e4;
+    --pst-color-text-base: #161616;
+}
+  
+  html[data-theme="dark"] {
+    --pst-color-background: #161616;
+    --pst-color-primary: #00daff;
+    --pst-color-secondary: #ffa500;
+    --pst-color-plot-background: rgb(218, 219, 220);
+    --pst-color-on-background: #3c3c3c;
+
+  }
+  body{
+  --pst-font-family-base: Lato, Segoe UI, "Helvetica Neue", Arial, sans-serif;
+  --pst-font-family-monospace: Hack, "SFMono-Regular", Menlo, Consolas, Monaco,
+    Liberation Mono, Lucida Console, monospace;
+  }
+
+  .bd-content {
+    flex-grow: 1;
+    max-width: 100%;  /* Override 60em default */
+  }
+  
+  /* Override for example gallery - remove border around card */
+  .bd-content div.sd-card.example-gallery {
+    border: none;
+  }

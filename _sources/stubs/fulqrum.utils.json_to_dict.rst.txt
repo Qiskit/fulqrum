@@ -1,0 +1,6 @@
+﻿fulqrum.utils.json\_to\_dict
+============================
+
+.. currentmodule:: fulqrum.utils
+
+.. autofunction:: json_to_dict

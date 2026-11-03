@@ -1,0 +1,6 @@
+﻿fulqrum.ramps.ramps\_open
+=========================
+
+.. currentmodule:: fulqrum.ramps
+
+.. autofunction:: ramps_open

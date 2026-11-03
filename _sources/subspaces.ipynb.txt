@@ -1,0 +1,253 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "aee6880a-d666-42a9-8267-2774cfc9da0e",
+   "metadata": {},
+   "source": [
+    "# Defining quantum subspaces\n",
+    "\n",
+    "The second main component of eigensolving, after the ``QubitOperator`` is the ``Subspace``.  The ``Subspace`` class is the Fulqrum representation of counts sampled from a quantum device or simulator."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3834acb2-579c-4f13-b1d6-d12c876e98eb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import fulqrum as fq"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fded8201-cad3-4aeb-b404-00e608686db3",
+   "metadata": {},
+   "source": [
+    "At present, ``Subspace`` objects are generated from counts represented by sampled bit-strings represented as Python strings in a dictionary\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "c4d64f77-8e53-4557-9478-30d5e86aa834",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 1 million Pseudo counts\n",
+    "num_qubits = 20\n",
+    "counts = []\n",
+    "for kk in range(int(1e5)):\n",
+    "    counts.append(bin(kk)[2:].zfill(num_qubits))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "752677e7-1350-4b62-933f-ce397181206a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "S = fq.Subspace([counts])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "441ed2e9-c7c6-4474-9293-7db87f44f356",
+   "metadata": {},
+   "source": [
+    "It is possible to query the size of the subspace using:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "3d172181-4499-4786-908c-f24b63bf0f91",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "100000"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S.size()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "031d167d-4bd5-47f4-bcda-961b81a5aa0d",
+   "metadata": {},
+   "source": [
+    "or"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "aebc867b-8c72-40be-8eae-161ccafb2e08",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "100000"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(S)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "603afe25-112a-4ef8-ad75-6fac6330365e",
+   "metadata": {},
+   "source": [
+    "It is also possible to get a specific element of the subspace by index.  Like Python dictionaries, the elements are in order:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "e6a4b6a0-292d-4243-bc07-4a9c4892b1b6",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<BitsetView: 00011000011010011111>"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S[-1]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f40dd9a5-765b-42c9-8e37-4696634b2381",
+   "metadata": {},
+   "source": [
+    "The ``BitsetView`` object is a view onto an underlying ``Bitset`` representing the bit-string of interest.  Here, view means that one is not allowed to manipulate the underlying data.\n",
+    "\n",
+    "These objects can also be converted to integers:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "47bc145b-095c-44cd-8681-df74eba97e4c",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "99999"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S[-1].to_int()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c81b5876-5fab-4f48-ac76-4f5e31625cea",
+   "metadata": {},
+   "source": [
+    "or strings:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "5927af3c-7561-4632-bf1a-22d55c4bea2f",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'00011000011010011111'"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S[-1].to_string()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b3f77ddd-e841-4c82-8563-3e1b6109fe83",
+   "metadata": {},
+   "source": [
+    "It is also possible to go directly to a string by passing the index:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "89e335a3-2367-423a-a2f2-0a7188aa32c3",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'00011000011010011111'"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S.get_n_th_bitstring(99999)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "fq-addon",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

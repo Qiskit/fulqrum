@@ -1,0 +1,1442 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Using QubitOperators" href="qubit_operators.html"><link rel="prev" title="Citing" href="citing.html">
+
+    <!-- Generated with Sphinx 9.2.0 and Furo 2025.12.19 -->
+        <title>Getting started - Fulqrum 0.5.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/qiskit-sphinx-theme.css?v=fc6d6d93" />
+    <link rel="stylesheet" type="text/css" href="_static/jupyter-sphinx.css" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=14156800" />
+    <link rel="stylesheet" type="text/css" href="_static/gallery.css?v=6e7c130a" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 2H2C1.73478 2 1.48043 2.10536 1.29289 2.29289C1.10536 2.48043 1 2.73478 1 3V13C1 13.2652 1.10536 13.5196 1.29289 13.7071C1.48043 13.8946 1.73478 14 2 14H14C14.2652 14 14.5196 13.8946 14.7071 13.7071C14.8946 13.5196 15 13.2652 15 13V3C15 2.73478 14.8946 2.48043 14.7071 2.29289C14.5196 2.10536 14.2652 2 14 2V2ZM2 3H10V13H2V3ZM14 13H11V3H14V13Z" fill="currentColor"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 3H2V4H14V3Z" fill="currentColor"/>
+      <path d="M14 12H2V13H14V12Z" fill="currentColor"/>
+      <path d="M14 6H2V7H14V6Z" fill="currentColor"/>
+      <path d="M14 9H2V10H14V9Z" fill="currentColor"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 8L6.00005 13L5.30005 12.3L9.60005 8L5.30005 3.7L6.00005 3L11 8Z" fill="currentColor"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 13H1V14H15V13Z" fill="currentColor"/>
+      <path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z" fill="currentColor"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 13.0002C11.5523 13.0002 12 12.5525 12 12.0002C12 11.4479 11.5523 11.0002 11 11.0002C10.4477 11.0002 10 11.4479 10 12.0002C10 12.5525 10.4477 13.0002 11 13.0002Z" fill="currentColor"/>
+      <path d="M14.8884 11.7394C14.5795 10.9524 14.0464 10.2734 13.3552 9.78646C12.664 9.29954 11.8451 9.02615 11 9.00017C10.1549 9.02615 9.33604 9.29954 8.64484 9.78646C7.95365 10.2734 7.42052 10.9524 7.11155 11.7394L7 12.0002L7.11155 12.2609C7.42052 13.0479 7.95365 13.727 8.64484 14.2139C9.33604 14.7008 10.1549 14.9742 11 15.0002C11.8451 14.9742 12.664 14.7008 13.3552 14.2139C14.0464 13.727 14.5795 13.0479 14.8884 12.2609L15 12.0002L14.8884 11.7394ZM11 14.0002C10.6044 14.0002 10.2178 13.8829 9.88886 13.6631C9.55996 13.4433 9.30362 13.131 9.15224 12.7655C9.00087 12.4001 8.96126 11.998 9.03843 11.61C9.1156 11.222 9.30608 10.8657 9.58579 10.586C9.86549 10.3063 10.2219 10.1158 10.6098 10.0386C10.9978 9.96143 11.3999 10.001 11.7654 10.1524C12.1308 10.3038 12.4432 10.5601 12.6629 10.889C12.8827 11.2179 13 11.6046 13 12.0002C12.9994 12.5304 12.7885 13.0388 12.4136 13.4137C12.0386 13.7887 11.5303 13.9996 11 14.0002Z" fill="currentColor"/>
+      <path d="M6 14.0002H4V2.00017H8V5.00017C8.00077 5.26515 8.10637 5.51906 8.29374 5.70643C8.48111 5.8938 8.73502 5.99941 9 6.00017H12V8.00017H13V5.00017C13.0018 4.93446 12.9893 4.86913 12.9634 4.80871C12.9375 4.74828 12.8988 4.6942 12.85 4.65017L9.35 1.15017C9.30599 1.10134 9.2519 1.06263 9.19147 1.03674C9.13104 1.01084 9.06572 0.998364 9 1.00017H4C3.73502 1.00094 3.48111 1.10654 3.29374 1.29391C3.10637 1.48128 3.00077 1.73519 3 2.00017V14.0002C3.00077 14.2652 3.10637 14.5191 3.29374 14.7064C3.48111 14.8938 3.73502 14.9994 4 15.0002H6V14.0002ZM9 2.20017L11.8 5.00017H9V2.20017Z" fill="currentColor"/>
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">Fulqrum 0.5.0  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">Fulqrum 0.5.0  documentation</span>
+  
+</a>
+<form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Fulqrum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qubit_operators.html">Using QubitOperators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermi_operators.html">Using FermionicOperators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subspaces.html">Defining Subspaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator_io.html">Operator IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subspace_hamiltonians.html">Subspace Hamiltonians</a></li>
+<li class="toctree-l1"><a class="reference internal" href="molecule_loading.html">Loading Molecular data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/heisenberg_spin_model.html">Heisenberg spin model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/n2_full_sqd_loop.html">Sample-based quantum diagonalization with Fulqrum</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Docs</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="apidocs/core.html">Core</a><input aria-label="Toggle navigation of Core" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.QubitOperator.html">fulqrum.core.QubitOperator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.FermionicOperator.html">fulqrum.core.FermionicOperator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.Subspace.html">fulqrum.core.Subspace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.Bitset.html">fulqrum.core.Bitset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.SubspaceHamiltonian.html">fulqrum.core.SubspaceHamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.core.CSRLinearOperator.html">fulqrum.core.CSRLinearOperator</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="apidocs/utils.html">Utilities</a><input aria-label="Toggle navigation of Utilities" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.utils.dict_to_json.html">fulqrum.utils.dict_to_json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.utils.json_to_dict.html">fulqrum.utils.json_to_dict</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="apidocs/ramps.html">RAMPS</a><input aria-label="Toggle navigation of RAMPS" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.ramps.ramps_open.html">fulqrum.ramps.ramps_open</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stubs/fulqrum.ramps.ramps_restricted_simple.html">fulqrum.ramps.ramps_restricted_simple</a></li>
+</ul>
+</li>
+</ul>
+
+</div></div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/started.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="getting-started">
+<span id="started"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
+<section id="simple-example">
+<h2>Simple example<a class="headerlink" href="#simple-example" title="Link to this heading">¶</a></h2>
+<p>Here we demonstrate the standard workflow using a simple example solving a Heisenberg problem on a 5x5 grid.</p>
+<p>To begin, we import the required libraries, and build our Hamiltonian as a <code class="docutils literal notranslate"><span class="pre">QubitOperator</span></code>:</p>
+<div class="jupyter_cell jupyter_container docutils container">
+<div class="cell_input code_cell docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">scipy.sparse.linalg</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">spla</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">qiskit.transpiler</span><span class="w"> </span><span class="kn">import</span> <span class="n">CouplingMap</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">fulqrum</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">fq</span>
+
+<span class="c1"># Build 16-qubit coupling map</span>
+<span class="n">cmap</span> <span class="o">=</span> <span class="n">CouplingMap</span><span class="o">.</span><span class="n">from_grid</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">num_qubits</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+
+<span class="c1"># Generate Hamiltonian</span>
+<span class="n">H</span> <span class="o">=</span> <span class="n">fq</span><span class="o">.</span><span class="n">QubitOperator</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">,</span> <span class="p">[])</span>
+<span class="n">touched_edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">({})</span>
+<span class="n">coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">cmap</span><span class="o">.</span><span class="n">get_edges</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">edge</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">touched_edges</span><span class="p">:</span>
+        <span class="n">touched_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+        <span class="n">H</span> <span class="o">+=</span> <span class="n">fq</span><span class="o">.</span><span class="n">QubitOperator</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">,</span> <span class="p">[(</span><span class="s2">"XX"</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                           <span class="p">(</span><span class="s2">"YY"</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                                           <span class="p">(</span><span class="s2">"ZZ"</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+</div>
+</div>
+<p>The subspace in which our Hamiltonian will be defined is derived from the counts sampled from a quantum computer
+and stored as a <code class="docutils literal notranslate"><span class="pre">Subspace</span></code> object (note that we do not use the counts data itself):</p>
+<div class="jupyter_cell jupyter_container docutils container">
+<div class="cell_input code_cell docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">counts</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">num_qubits</span><span class="p">):</span>
+    <span class="n">counts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bin</span><span class="p">(</span><span class="n">kk</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="n">num_qubits</span><span class="p">))</span>
+
+<span class="n">S</span> <span class="o">=</span> <span class="n">fq</span><span class="o">.</span><span class="n">Subspace</span><span class="p">([</span><span class="n">counts</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+</div>
+</div>
+<p>Right now we have a Hamiltonian and a subspace, but they know nothing about each other.  We can combine
+them into a <code class="docutils literal notranslate"><span class="pre">SubspaceHamiltonian</span></code> object, which is where all the magic happens, and is what we pass on
+to the eigensolver:</p>
+<div class="jupyter_cell jupyter_container docutils container">
+<div class="cell_input code_cell docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Hsub</span> <span class="o">=</span> <span class="n">fq</span><span class="o">.</span><span class="n">SubspaceHamiltonian</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+<span class="n">evals</span><span class="p">,</span> <span class="n">evecs</span> <span class="o">=</span> <span class="n">spla</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">Hsub</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">'SA'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+</div>
+</div>
+<p>In passing the <code class="docutils literal notranslate"><span class="pre">SubspaceHamiltonian</span></code> object directly we have solved the problem using a matrix-free method,
+but one can build a collection of different, more performant, matrix-representations from this object.
+The found eigenenergy is:</p>
+<div class="jupyter_cell jupyter_container docutils container">
+<div class="cell_input code_cell docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">"Eigenvalue:"</span><span class="p">,</span> <span class="n">evals</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-none notranslate"><div class="highlight"><pre><span></span>Eigenvalue: -23.999999999999993
+</pre></div>
+</div>
+</div>
+</div>
+<p>there is of course an associated eigenvector, but because of the way Fulqrum solves the problem, it is not
+immediately usable.  Instead, we can use <code class="docutils literal notranslate"><span class="pre">SubspaceHamiltonian.interpret_vector()</span></code> to cast the solution
+as a dictionary the statevector amplitudes as values:</p>
+<div class="jupyter_cell jupyter_container docutils container">
+<div class="cell_input code_cell docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Hsub</span><span class="o">.</span><span class="n">interpret_vector</span><span class="p">(</span><span class="n">evecs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-none notranslate"><div class="highlight"><pre><span></span>{'0000000000000000': -0.5664649631688626,
+ '0000000000000001': 3.61825437031024e-13,
+ '0000000000000010': -5.230626210338448e-13,
+ '0000000000000011': -1.0034902864585909e-12,
+ '0000000000000100': -3.9021455639737165e-13,
+ '0000000000000101': -1.4201580917090067e-13,
+ '0000000000000110': 2.788040259462131e-14,
+ '0000000000000111': 1.2703493193691682e-14,
+ '0000000000001000': 7.819321511137172e-14,
+ '0000000000001001': 1.6717550469433805e-13,
+ '0000000000001010': -6.359186497249165e-14,
+ '0000000000001011': -2.1709241696709337e-13,
+ '0000000000001100': -3.876570790895801e-13,
+ '0000000000001101': -3.4756483792402634e-13,
+ '0000000000001110': -4.188895434636072e-14,
+ '0000000000001111': -3.9252470801195724e-14,
+ '0000000000010000': -2.0971824524286682e-13,
+ '0000000000010001': 3.7798626944525425e-13,
+ '0000000000010010': -1.637976123498707e-13,
+ '0000000000010011': -3.291996439888207e-14,
+ '0000000000010100': -4.641751020322239e-14,
+ '0000000000010101': 3.4385913032415736e-14,
+ '0000000000010110': 9.748138275719424e-14,
+ '0000000000010111': -1.1196388372552286e-14,
+ '0000000000011000': -1.5975035161428543e-13,
+ '0000000000011001': 7.447774154293104e-14,
+ '0000000000011011': -6.464711608200614e-14,
+ '0000000000011100': -8.785699774920408e-14,
+ '0000000000011101': -8.424008270699794e-14,
+ '0000000000100000': -2.557303352343029e-13,
+ '0000000000100001': -4.641110807053708e-14,
+ '0000000000100010': 6.260320882844311e-14,
+ '0000000000100011': -4.4969979736402937e-14,
+ '0000000000100101': 1.303086897551163e-14,
+ '0000000000100110': 6.478936821302505e-14,
+ '0000000000100111': 9.345129234928603e-14,
+ '0000000000101000': -1.1143438603158717e-13,
+ '0000000000101001': -1.7135924460830022e-14,
+ '0000000000101010': 4.9049948091504444e-14,
+ '0000000000101100': 1.1979047957421783e-14,
+ '0000000000101101': -2.3087538776271257e-14,
+ '0000000000101110': -1.9021617046941815e-14,
+ '0000000000101111': 1.1913857931240717e-14,
+ '0000000000110000': -9.933969206682873e-14,
+ '0000000000110001': 4.5379293017815874e-14,
+ '0000000000110010': -2.0013337924605818e-14,
+ '0000000000110011': -3.6376576210038485e-14,
+ '0000000000110100': 2.610966161969588e-14,
+ '0000000000110101': 1.9327212558578708e-14,
+ '0000000000110110': 2.0889444121371282e-14,
+ '0000000000110111': -5.401207479635941e-14,
+ '0000000000111000': -5.410266265832459e-14,
+ '0000000000111001': -1.2604673004709792e-14,
+ '0000000000111011': -2.1755001272648887e-14,
+ '0000000000111100': 2.2782485975755517e-14,
+ '0000000000111101': -2.477516809866563e-14,
+ '0000000000111110': -1.454672371633579e-14,
+ '0000000000111111': -1.86038671999886e-14,
+ '0000000001000000': -4.8792154374255515e-14,
+ '0000000001000001': 2.0551580057725276e-14,
+ '0000000001000010': 7.923205531883016e-14,
+ '0000000001000011': -5.703442847913568e-14,
+ '0000000001000100': 1.6562274125711146e-13,
+ '0000000001000101': -1.5376586487478643e-14,
+ '0000000001000110': 8.475955285526642e-14,
+ '0000000001000111': 7.084796175105305e-14,
+ '0000000001001000': 8.526585020138818e-14,
+ '0000000001001001': -2.224489019120135e-14,
+ '0000000001001010': 5.3380894000552e-14,
+ '0000000001001100': 2.6718424918570623e-13,
+ '0000000001001111': -2.699557587784946e-14,
+ '0000000001010000': -4.965217112566955e-14,
+ '0000000001010001': 2.7039913758885952e-14,
+ '0000000001010100': 2.324551084967875e-14,
+ '0000000001010110': 1.830917747078179e-14,
+ '0000000001010111': -1.844847109137828e-14,
+ '0000000001011001': -2.2289940495814178e-14,
+ '0000000001011100': -1.1755342434086566e-14,
+ '0000000001011110': -1.4422329917126177e-14,
+ '0000000001011111': 4.629187668342352e-14,
+ '0000000001100000': -2.117969613919477e-14,
+ '0000000001100001': -1.2294079206569081e-14,
+ '0000000001100010': 2.6527470584427847e-14,
+ '0000000001100011': 1.5769283547820503e-14,
+ '0000000001100100': 3.288234073903528e-14,
+ '0000000001100101': 1.3379518861780964e-14,
+ '0000000001100110': 3.887180477396072e-14,
+ '0000000001100111': 6.56608343623907e-14,
+ '0000000001101000': 1.1343320847254223e-14,
+ '0000000001101011': 3.313905391952107e-14,
+ '0000000001101100': -1.752336780194325e-14,
+ '0000000001101111': 4.345039229968096e-14,
+ '0000000001110001': 1.4104543168460688e-14,
+ '0000000001110110': 9.353176363430946e-14,
+ '0000000001110111': -5.0552347061641216e-14,
+ '0000000001111000': 1.7108800423048544e-14,
+ '0000000001111001': -2.0638728838501583e-14,
+ '0000000001111010': 2.6481284970052284e-14,
+ '0000000001111011': -2.4477111114250643e-14,
+ '0000000001111100': -1.3586076501456936e-14,
+ '0000000001111101': 2.1549379147277348e-14,
+ '0000000001111110': 3.1234785389461506e-14,
+ '0000000010000000': 1.952085844113923e-13,
+ '0000000010000001': 5.3012608755802424e-14,
+ '0000000010000010': -2.4391833815032368e-14,
+ '0000000010000011': -4.377954265153001e-14,
+ '0000000010000100': 7.894614913160304e-14,
+ '0000000010000101': -7.029079764915255e-14,
+ '0000000010000110': 3.5980843131990933e-14,
+ '0000000010000111': 3.219446004746285e-14,
+ '0000000010001000': 6.776287708478618e-13,
+ '0000000010001001': 7.771593353457849e-14,
+ '0000000010001010': 3.01552500815754e-14,
+ '0000000010001011': 2.3074945800401356e-14,
+ '0000000010001100': 1.1841089024761204e-14,
+ '0000000010001111': -7.712052756971111e-14,
+ '0000000010010000': -6.011946924583928e-14,
+ '0000000010010001': 2.5109291719530178e-14,
+ '0000000010010010': -1.458830715396648e-14,
+ '0000000010010011': -2.796299484706714e-14,
+ '0000000010010101': -2.435093027882548e-14,
+ '0000000010011000': 8.038642229531811e-14,
+ '0000000010011101': 3.578384964030279e-14,
+ '0000000010011110': -1.0782393364427664e-14,
+ '0000000010011111': 3.219269601901954e-14,
+ '0000000010100000': -7.142147374662467e-14,
+ '0000000010100001': -1.7772686785990135e-14,
+ '0000000010100010': 3.324383337427439e-14,
+ '0000000010100011': -1.2853925842730655e-14,
+ '0000000010100100': 1.0024638366347046e-14,
+ '0000000010100110': 1.3831407680804226e-14,
+ '0000000010100111': 2.677334807690287e-14,
+ '0000000010101000': 1.7919519136970865e-14,
+ '0000000010101010': 2.1374312897045127e-14,
+ '0000000010101011': 2.2676682229446507e-14,
+ '0000000010101100': 2.2684875333217403e-14,
+ '0000000010101101': 1.2863342140019538e-14,
+ '0000000010101111': 2.478201503999342e-14,
+ '0000000010110000': -3.831234635842346e-14,
+ '0000000010110001': -4.903292980832434e-14,
+ '0000000010110010': -1.846375133848469e-14,
+ '0000000010110011': 3.4795375107992206e-14,
+ '0000000010111000': -1.0634035646409863e-14,
+ '0000000010111101': 1.5552878391993718e-14,
+ '0000000010111110': 2.3852641127110406e-14,
+ '0000000011000001': -6.825317819601445e-14,
+ '0000000011000010': 1.9721267656157555e-14,
+ '0000000011000100': 5.889829623933266e-14,
+ '0000000011000110': 2.9125039744022886e-14,
+ '0000000011001000': -7.329461835720104e-14,
+ '0000000011001001': -2.065430224107567e-14,
+ '0000000011001100': 3.3292327734875253e-14,
+ '0000000011001110': 7.771333117130778e-14,
+ '0000000011001111': -7.516807516565806e-14,
+ '0000000011010000': -2.8551213550558065e-14,
+ '0000000011010001': -6.408719078445869e-14,
+ '0000000011010011': 2.194190632938024e-14,
+ '0000000011010100': -1.5342319818247974e-14,
+ '0000000011010111': 1.3968107326392565e-14,
+ '0000000011011000': -2.6607614982697283e-14,
+ '0000000011011001': 1.4694038389593404e-14,
+ '0000000011011100': 3.454346341627863e-14,
+ '0000000011011110': -1.57243309147328e-14,
+ '0000000011011111': 1.0924465710331261e-14,
+ '0000000011100011': 5.197198572972097e-14,
+ '0000000011101000': -1.1258235559585477e-14,
+ '0000000011101011': 2.3696752670531432e-14,
+ '0000000011101100': 1.2383753685930369e-14,
+ '0000000011101111': 2.625068553079295e-14,
+ '0000000011110000': 3.1976762125775436e-14,
+ '0000000011110010': 1.3216492380807472e-14,
+ '0000000011110011': -1.089310927293744e-14,
+ '0000000011110110': 1.2837065406993943e-14,
+ '0000000011111000': -1.6292339523099962e-14,
+ '0000000011111001': 1.8877793069914294e-14,
+ '0000000011111010': 1.637626477965893e-14,
+ '0000000011111011': -2.6084810743900923e-14,
+ '0000000011111100': 1.2071131730091846e-14,
+ '0000000011111101': 1.7640593834993284e-14,
+ '0000000011111110': 1.969874257922372e-14,
+ '0000000011111111': -1.4699635049233708e-14,
+ '0000000100000000': -2.411840099631354e-13,
+ '0000000100000001': 7.56346874442989e-13,
+ '0000000100000010': 2.785929895642516e-13,
+ '0000000100000011': -1.1112811639896812e-14,
+ '0000000100000100': 1.3183677186678737e-13,
+ '0000000100000101': -1.862442215155556e-14,
+ '0000000100000111': -2.6478772597423847e-14,
+ '0000000100001000': -8.041763221886124e-14,
+ '0000000100001001': -4.0258792263295776e-14,
+ '0000000100001010': -3.4176907164978653e-14,
+ '0000000100001011': -1.5314103339841047e-14,
+ '0000000100001101': -1.843738398712551e-14,
+ '0000000100001111': -2.904247381102473e-14,
+ '0000000100010000': 5.860044885845999e-13,
+ '0000000100010001': 2.719336906279007e-13,
+ '0000000100010010': 2.222284291624973e-14,
+ '0000000100010011': 8.28202261803654e-14,
+ '0000000100010100': -7.284424986984125e-14,
+ '0000000100010101': 2.6436249572174174e-14,
+ '0000000100010110': -2.940778159287449e-14,
+ '0000000100010111': 5.093286563140804e-14,
+ '0000000100011000': -1.6853140588657256e-13,
+ '0000000100011001': -1.9138163653668906e-14,
+ '0000000100011010': -2.6032615735283495e-14,
+ '0000000100011100': -2.932133621960482e-14,
+ '0000000100011110': 3.237907030686309e-14,
+ '0000000100011111': 4.91197524997759e-14,
+ '0000000100100000': 5.819497606969326e-14,
+ '0000000100100001': 4.42266746403131e-14,
+ '0000000100100011': 2.89667105887025e-14,
+ '0000000100100100': -1.7887806683422947e-14,
+ '0000000100100110': -1.2193036244750328e-14,
+ '0000000100101000': -4.096302355150893e-14,
+ '0000000100101100': -1.194977917827741e-14,
+ '0000000100101110': 3.3054267079202535e-14,
+ '0000000100101111': 1.695605075964536e-14,
+ '0000000100110000': 8.551213438527705e-14,
+ '0000000100110001': -1.0106212490883549e-13,
+ '0000000100110010': -4.385283540399246e-14,
+ '0000000100110011': 5.84941321460003e-14,
+ '0000000100110100': -3.341406270965047e-14,
+ '0000000100110101': 2.4624135492544454e-14,
+ '0000000100110110': 2.1718447460907344e-14,
+ '0000000100110111': -1.65491929075161e-14,
+ '0000000100111000': -1.481422156989891e-14,
+ '0000000100111001': -1.0398180159840771e-14,
+ '0000000100111010': 1.925578520784505e-14,
+ '0000000100111011': 1.9712976119253396e-14,
+ '0000000100111101': 1.9898775824311215e-14,
+ '0000000100111111': 9.841518338809657e-14,
+ '0000000101000000': -2.40470967651146e-14,
+ '0000000101000001': -1.169936416479825e-14,
+ '0000000101000011': 1.2932912848591034e-14,
+ '0000000101000100': -1.3407193212367153e-14,
+ '0000000101000111': 1.3169775507819773e-14,
+ '0000000101001000': 1.4179757005345467e-14,
+ '0000000101001100': -4.979467576907547e-14,
+ '0000000101001101': -2.045406424413625e-14,
+ '0000000101001110': -1.046873206934542e-14,
+ '0000000101001111': 2.6166461229658062e-14,
+ '0000000101010001': -2.38336160376058e-14,
+ '0000000101010010': -1.379423324747067e-14,
+ '0000000101010011': 1.478080815582952e-14,
+ '0000000101010110': 1.356610508102804e-14,
+ '0000000101010111': -4.200797711696197e-14,
+ '0000000101011001': 1.6415026040048635e-14,
+ '0000000101011101': 1.8947523856539584e-14,
+ '0000000101011111': 5.000415909478217e-14,
+ '0000000101100000': 1.4998388590080158e-14,
+ '0000000101100011': -1.3859587902986924e-14,
+ '0000000101100100': 1.5242268444111027e-14,
+ '0000000101101010': 1.087225655835107e-14,
+ '0000000101110000': -2.6034333072545267e-14,
+ '0000000101110011': -2.3132490982453412e-14,
+ '0000000101110101': -1.3797067628599248e-14,
+ '0000000101110110': 1.8155974743115332e-14,
+ '0000000101110111': 7.659294158608196e-14,
+ '0000000101111011': 1.7508506284754992e-14,
+ '0000000101111110': -4.937381549872939e-14,
+ '0000000101111111': 3.653253288513893e-14,
+ '0000000110000000': -1.8415033559278157e-14,
+ '0000000110000001': -1.9484251053995722e-14,
+ '0000000110000010': -3.1959249356891295e-14,
+ '0000000110000111': 1.3777979244480542e-14,
+ '0000000110001000': 7.182904837807787e-14,
+ '0000000110001001': 1.7598951181233767e-14,
+ '0000000110001100': -1.971985817287454e-14,
+ '0000000110001111': 1.1810399566064112e-14,
+ '0000000110010000': 2.2648207677334708e-14,
+ '0000000110010001': -1.2986256938453584e-14,
+ '0000000110010110': 1.2010379941916036e-14,
+ '0000000110010111': -1.3924738149699615e-14,
+ '0000000110011001': 2.0968604136249582e-14,
+ '0000000110011100': 1.0231419727250139e-14,
+ '0000000110011101': 2.9387679007200574e-14,
+ '0000000110011111': 1.856039918028064e-14,
+ '0000000110101000': -2.412818490877521e-14,
+ '0000000110101111': -1.2496660340504024e-14,
+ '0000000110110011': -2.0654347700563148e-14,
+ '0000000110110111': 4.4319604702011134e-14,
+ '0000000110111000': 1.8096335494644146e-14,
+ '0000000110111001': 1.2848988457575429e-14,
+ '0000000110111011': 1.466537286334051e-14,
+ '0000000110111110': -2.4522529543436115e-14,
+ '0000000110111111': 4.1961920797235383e-14,
+ '0000000111000100': -1.5775722087646196e-14,
+ '0000000111000110': -1.2885978276067916e-14,
+ '0000000111001000': -2.4764384592894985e-14,
+ '0000000111001100': 2.6780572378836113e-14,
+ '0000000111001101': -2.540057599141635e-14,
+ '0000000111001110': -4.379885945004522e-14,
+ '0000000111001111': -1.1410417729123351e-14,
+ '0000000111010000': 1.7647537023966927e-14,
+ '0000000111010011': -2.0009832777074875e-14,
+ '0000000111010111': 2.1801534491105345e-14,
+ '0000000111011000': 1.462584147255709e-14,
+ '0000000111011001': 1.2850884380738191e-14,
+ '0000000111011011': 1.2335585311079847e-14,
+ '0000000111011111': -1.434785901248501e-14,
+ '0000000111100000': 1.473835453033664e-14,
+ '0000000111100111': 2.4611422023945193e-14,
+ '0000000111101000': -1.1267175364073147e-14,
+ '0000000111101110': -2.161178141831455e-14,
+ '0000000111110001': -1.3036490459937015e-14,
+ '0000000111110011': 1.707492182934598e-14,
+ '0000000111110110': -1.1163974962780387e-14,
+ '0000000111110111': 2.6502632927593017e-14,
+ '0000000111111001': 1.3379476598970838e-14,
+ '0000000111111100': 2.329561865005759e-14,
+ '0000000111111101': -2.1851739706699943e-14,
+ '0000000111111110': 3.099264779553586e-14,
+ '0000000111111111': -1.7747705073260803e-13,
+ '0000001000000000': 1.2164720532656092e-14,
+ '0000001000000001': 2.747674063165952e-13,
+ '0000001000000010': 1.4166668691077972e-13,
+ '0000001000000011': -1.4454116913926343e-14,
+ '0000001000000101': 1.3202631180454166e-14,
+ '0000001000000110': 2.396907607964301e-14,
+ '0000001000001000': -7.607289856910592e-14,
+ '0000001000001100': -1.061082926316585e-14,
+ '0000001000001111': -1.4585696788628027e-14,
+ '0000001000010000': 1.9108926267517842e-13,
+ '0000001000010001': 6.441704435909768e-14,
+ '0000001000010101': 1.2157685851229628e-14,
+ '0000001000010111': -1.5209638689965428e-14,
+ '0000001000011000': -4.683641036950134e-14,
+ '0000001000011011': -1.1417143917730244e-14,
+ '0000001000011110': 1.2453922574070676e-14,
+ '0000001000100000': 7.290432153088064e-14,
+ '0000001000100001': -2.581433754408244e-14,
+ '0000001000100010': -2.1298983506601732e-14,
+ '0000001000100011': 1.6053235230281076e-14,
+ '0000001000100111': -3.6960913091439405e-14,
+ '0000001000101000': -1.8388927041940353e-14,
+ '0000001000101001': -1.622472890600619e-14,
+ '0000001000101101': 1.0822884675736727e-14,
+ '0000001000101110': 4.779934709166187e-14,
+ '0000001000101111': 2.891027436800732e-14,
+ '0000001000110001': -6.52010829796926e-14,
+ '0000001000110010': -2.4945720911651738e-14,
+ '0000001000110011': 5.736868092972755e-14,
+ '0000001000110100': -1.1968968817896425e-14,
+ '0000001000111100': 1.2009326944379715e-14,
+ '0000001000111111': 3.058766098916581e-14,
+ '0000001001000000': -3.964679545751245e-14,
+ '0000001001001000': -1.6348876145498027e-14,
+ '0000001001001111': 1.3733112054996984e-14,
+ '0000001001010000': 1.3227501737728291e-14,
+ '0000001001100000': 1.1988194919020575e-14,
+ '0000001001100010': 1.0311194218422386e-14,
+ '0000001001100011': -1.1635522117180499e-14,
+ '0000001001100100': 1.7836979328618985e-14,
+ '0000001001100101': -1.615712601662974e-14,
+ '0000001001100110': -5.581987652365097e-14,
+ '0000001001100111': 1.8224207399730787e-14,
+ '0000001001101010': -1.2388975378343863e-14,
+ '0000001001101011': 1.438859712486918e-14,
+ '0000001001101100': -1.1689164708305917e-14,
+ '0000001001101110': -2.082827891791218e-14,
+ '0000001001110001': -1.222370754213613e-14,
+ '0000001001110010': -1.0623287369732625e-14,
+ '0000001001110011': 1.8521967498044378e-14,
+ '0000001001110101': 1.0449819000503102e-14,
+ '0000001001110110': 1.5537982175847837e-14,
+ '0000001001110111': 7.539260982189416e-14,
+ '0000001001111011': 2.7947102454285622e-14,
+ '0000001010000000': -3.542221003399148e-14,
+ '0000001010000010': 1.7360823368860484e-14,
+ '0000001010001000': 2.0382513265021026e-14,
+ '0000001010001100': 1.6156154308070923e-14,
+ '0000001010001110': -1.516971595338613e-14,
+ '0000001010010001': -1.5372585930111124e-14,
+ '0000001010010010': -1.0905240408007356e-14,
+ '0000001010010011': 1.1142463492545626e-14,
+ '0000001010011000': -1.5148168867204104e-14,
+ '0000001010101011': 1.4081931596050446e-14,
+ '0000001010101100': -1.936460345273693e-14,
+ '0000001010101110': -1.623624643020707e-14,
+ '0000001010110111': 2.94292324071861e-14,
+ '0000001010111111': 1.6474417318933622e-14,
+ '0000001011001100': -2.906132642256027e-14,
+ '0000001011001110': -1.488058787289288e-14,
+ '0000001011100001': 1.061832417590084e-14,
+ '0000001011100100': 1.1176859784568822e-14,
+ '0000001011100110': -1.1526078530855144e-14,
+ '0000001011101110': -5.547344620359619e-14,
+ '0000001011101111': -3.882850427449002e-14,
+ '0000001011111011': -1.9877101767251564e-14,
+ '0000001011111101': -1.678539261772926e-14,
+ '0000001011111111': -6.808518876763008e-14,
+ '0000001100000001': 3.8727850472468977e-14,
+ '0000001100000010': 5.447096295329997e-14,
+ '0000001100000011': -2.485849212371556e-14,
+ '0000001100000100': 2.3911042795708165e-14,
+ '0000001100000101': -1.017026496184313e-14,
+ '0000001100000110': -1.92752765957006e-14,
+ '0000001100001000': -4.1460884336631825e-14,
+ '0000001100001010': -1.7825557523448682e-14,
+ '0000001100001100': -2.2512666789108935e-14,
+ '0000001100001110': 2.0479208813801783e-14,
+ '0000001100010000': 8.666423791531012e-14,
+ '0000001100010001': -9.847451769857065e-14,
+ '0000001100010010': -3.897719674583463e-14,
+ '0000001100010011': -3.6766531094808955e-14,
+ '0000001100010100': -2.261872059797513e-14,
+ '0000001100011111': 6.929352520580237e-14,
+ '0000001100100000': 9.297838586773959e-14,
+ '0000001100100001': -4.036699786928896e-14,
+ '0000001100100010': -1.941381754013048e-14,
+ '0000001100100011': 2.527439194794298e-14,
+ '0000001100100100': -2.3752391075413063e-14,
+ '0000001100101110': -1.5332914228845363e-14,
+ '0000001100101111': 3.767373853198688e-14,
+ '0000001100110000': -7.613451872799146e-14,
+ '0000001100110001': -1.258363453999774e-13,
+ '0000001100110010': -3.864162710168861e-14,
+ '0000001100110011': 2.939702054416129e-14,
+ '0000001100110100': -1.9979094028908113e-14,
+ '0000001100110110': -2.5580139946659387e-14,
+ '0000001100110111': -5.55267934821365e-14,
+ '0000001100111000': -1.7409462234089587e-14,
+ '0000001100111001': -3.706527587570606e-14,
+ '0000001100111010': -3.422664162890366e-14,
+ '0000001100111011': -4.3590143794119275e-14,
+ '0000001100111100': -3.733578365730492e-14,
+ '0000001100111101': 1.8738991185131738e-14,
+ '0000001100111110': 1.959187967283237e-14,
+ '0000001100111111': 1.5071327659095754e-14,
+ '0000001101000000': 2.3180707477456366e-14,
+ '0000001101000001': -1.1518876795976886e-14,
+ '0000001101001000': -1.0298096597359498e-14,
+ '0000001101010001': -1.282437480410951e-14,
+ '0000001101011001': -1.2136622813962011e-14,
+ '0000001101011100': -1.4469344542291747e-14,
+ '0000001101100000': -1.0742059251581502e-14,
+ '0000001101100010': 1.526057913854085e-14,
+ '0000001101100011': 1.25616238777686e-14,
+ '0000001101101110': 2.300973651818539e-14,
+ '0000001101110000': -3.6113784229063116e-14,
+ '0000001101110010': -1.4089515066906722e-14,
+ '0000001101110011': -1.2820429923159976e-14,
+ '0000001101110100': -1.5553929375197355e-14,
+ '0000001101110110': -1.203521012976899e-14,
+ '0000001101111000': -1.7932609341486087e-14,
+ '0000001101111001': 1.7766057163459275e-14,
+ '0000001101111011': -2.2892154360800032e-14,
+ '0000001101111100': 1.5907091204731703e-14,
+ '0000001101111110': 1.5289666584489275e-14,
+ '0000001101111111': -7.698610051729852e-14,
+ '0000001110000100': -1.1136957985057093e-14,
+ '0000001110001000': -5.76300292692937e-14,
+ '0000001110010011': -1.4362763198026844e-14,
+ '0000001110010111': 2.400886085529347e-14,
+ '0000001110011000': 1.832497625616899e-14,
+ '0000001110011011': 1.7413840641462426e-14,
+ '0000001110011100': -1.7613113595537895e-14,
+ '0000001110100011': -1.0561022624897645e-14,
+ '0000001110100111': 1.5464958237718796e-14,
+ '0000001110101000': 1.3871003259194235e-14,
+ '0000001110110001': -1.1298435483640848e-14,
+ '0000001110110010': -1.19999824331521e-14,
+ '0000001110110100': -1.3841808243453472e-14,
+ '0000001110110110': 1.2891867152351518e-14,
+ '0000001110110111': -2.127761114780367e-14,
+ '0000001110111000': -1.8624485011732133e-14,
+ '0000001110111001': 1.5548428808645054e-14,
+ '0000001110111011': -4.878720462529626e-14,
+ '0000001110111100': 1.1347654934609711e-14,
+ '0000001110111101': -1.3725461728690865e-14,
+ '0000001110111111': -6.332185642731261e-14,
+ '0000001111010001': -1.058496974660835e-14,
+ '0000001111010010': -1.2312503491695245e-14,
+ '0000001111011010': 1.2722826753112915e-14,
+ '0000001111011011': -1.3227896010300508e-14,
+ '0000001111011101': -1.0674642364817846e-14,
+ '0000001111011111': -3.428844651154587e-14,
+ '0000001111100001': -1.3889329307536382e-14,
+ '0000001111100010': -1.3792197214378288e-14,
+ '0000001111100100': -1.0790498450610237e-14,
+ '0000001111101011': -1.7368559996388648e-14,
+ '0000001111101101': -2.0335242672585922e-14,
+ '0000001111101110': -1.838537249861405e-14,
+ '0000001111101111': -3.9050248198506813e-14,
+ '0000001111110000': -1.879990671525732e-14,
+ '0000001111110001': 1.3248775071191836e-14,
+ '0000001111110010': 1.37283639035201e-14,
+ '0000001111110011': -3.355197289724942e-14,
+ '0000001111110111': -2.865301296286619e-14,
+ '0000001111111001': -1.713145988962965e-14,
+ '0000001111111010': -1.2861799297194315e-14,
+ '0000001111111100': -2.8821747850267496e-14,
+ '0000001111111111': 5.3767293753314614e-14,
+ '0000010000000000': -1.3207670950133058e-13,
+ '0000010000000001': 6.980762349645188e-14,
+ '0000010000000010': 3.411190138500427e-14,
+ '0000010000000011': -2.3603788318092734e-14,
+ '0000010000000100': -7.878531563141229e-14,
+ '0000010000000110': 2.1335648680565173e-14,
+ '0000010000000111': 3.004543793121774e-14,
+ '0000010000001000': -1.2660057458405741e-13,
+ '0000010000001001': 3.313093493576119e-14,
+ '0000010000001010': 4.1823653433372745e-14,
+ '0000010000001100': 4.945331164509615e-14,
+ '0000010000001101': 1.2833992076257464e-14,
+ '0000010000001110': 1.3592466110754305e-14,
+ '0000010000010000': 5.067864367833167e-14,
+ '0000010000010001': 4.203729508687877e-14,
+ '0000010000010011': 2.935141030581314e-14,
+ '0000010000010100': 1.4125553817412719e-14,
+ '0000010000010111': 1.9160019122917085e-14,
+ '0000010000011000': 1.8943747843580305e-14,
+ '0000010000011001': -1.2883220882465612e-14,
+ '0000010000011011': 1.8297531316573817e-14,
+ '0000010000011100': -1.2467064686645744e-14,
+ '0000010000011111': 1.3214179943315522e-14,
+ '0000010000100000': 1.668574186170535e-14,
+ '0000010000100001': 1.9523054093410258e-14,
+ '0000010000100010': 1.4245889632203076e-14,
+ '0000010000100011': 1.6132629018924514e-14,
+ '0000010000101011': 1.2675460634808339e-14,
+ '0000010000101111': 1.67327757870165e-14,
+ '0000010000110011': 4.4793989199925726e-14,
+ '0000010000111011': -1.6165793968867635e-14,
+ '0000010001000000': -1.196614412777539e-13,
+ '0000010001000001': 1.4136642447489605e-14,
+ '0000010001000011': 1.5188244400506594e-14,
+ '0000010001000100': -2.6325262846995578e-14,
+ '0000010001000111': 3.5048009802085065e-14,
+ '0000010001001000': -2.2597862479309254e-14,
+ '0000010001001001': 1.146184819978067e-14,
+ '0000010001001100': 1.5691349075712917e-14,
+ '0000010001001101': -1.4729602669161647e-14,
+ '0000010001001110': -4.6825628804128215e-14,
+ '0000010001010000': 1.9089847924378856e-14,
+ '0000010001010011': 1.6848066618590066e-14,
+ '0000010001010110': 1.0245243950472581e-14,
+ '0000010001100100': 1.8280456372845387e-14,
+ '0000010001100110': -3.421800752187899e-14,
+ '0000010001100111': 1.0377657696700601e-14,
+ '0000010001110000': 1.3657350672734133e-14,
+ '0000010001110010': -1.4306030425535007e-14,
+ '0000010001110111': 1.1071212171259827e-14,
+ '0000010001111101': -1.199578155285397e-14,
+ '0000010010000000': -4.949091347375016e-14,
+ '0000010010000001': -2.610024818111241e-14,
+ '0000010010000011': 2.357948023530932e-14,
+ '0000010010000100': -1.9418105958298264e-14,
+ '0000010010000111': 1.7499197836961463e-14,
+ '0000010010001001': -2.1153435169803244e-14,
+ '0000010010001100': 1.9581662625514154e-14,
+ '0000010010001101': -1.1389512582641534e-14,
+ '0000010010001110': -2.4097748195834812e-14,
+ '0000010010010000': 1.5536272408881196e-14,
+ '0000010010010001': -1.105244576063096e-14,
+ '0000010010010101': 1.1308499244653595e-14,
+ '0000010010011000': -3.0431560300146024e-14,
+ '0000010010011001': 2.150570308568034e-14,
+ '0000010010011100': 1.1383171409095935e-14,
+ '0000010010011111': -1.796577812162833e-14,
+ '0000010010100011': 1.4762059907211725e-14,
+ '0000010010110000': 1.0950802383919344e-14,
+ '0000010011000000': -4.0613160962090105e-14,
+ '0000010011000011': 1.6619934487393298e-14,
+ '0000010011000100': 1.0618338457145744e-14,
+ '0000010011000110': -1.539906027950521e-14,
+ '0000010011000111': 1.5541276473240894e-14,
+ '0000010011001000': 2.292554513125061e-14,
+ '0000010011001100': -4.613676246393384e-14,
+ '0000010011001110': -1.1319734213755072e-14,
+ '0000010011001111': -1.5005675800864206e-14,
+ '0000010011011001': 1.3759950507653305e-14,
+ '0000010011100001': 2.704093230618747e-14,
+ '0000010011100010': 4.197978289267629e-14,
+ '0000010011100100': 2.294371952522812e-14,
+ '0000010011100111': -1.5156173116995787e-14,
+ '0000010011101000': 2.4386652745335736e-14,
+ '0000010011101111': -3.626961343223625e-14,
+ '0000010011110000': 1.0321607748867817e-14,
+ '0000010011110011': 2.0618178094062362e-14,
+ '0000010011111010': 1.3878565591521835e-14,
+ '0000010011111011': -2.7979820062604382e-14,
+ '0000010011111101': -2.3871604696289004e-14,
+ '0000010011111111': 4.7234325633211115e-14,
+ '0000010100000000': -1.9829864998600152e-14,
+ '0000010100000011': 1.227840833231786e-14,
+ '0000010100000100': 1.112228109938215e-14,
+ '0000010100001010': -1.7380249157742088e-14,
+ '0000010100001100': -2.0627009616423555e-14,
+ '0000010100010000': -4.203981159741831e-14,
+ '0000010100010001': -1.9376293739733744e-14,
+ '0000010100010010': -1.0878359443755658e-14,
+ '0000010100010111': -1.7344490642752248e-14,
+ '0000010100011111': 2.41104841011668e-14,
+ '0000010100110000': -2.188936825373502e-14,
+ '0000010100110001': -2.0220443695668532e-14,
+ '0000010100110011': 1.6772745357611842e-14,
+ '0000010100111001': -1.0167259552948161e-14,
+ '0000010101000000': 1.0740943053429452e-14,
+ '0000010101010001': -1.1678229484522537e-14,
+ '0000010101010101': 1.0176486942759879e-14,
+ '0000010101011101': 1.5277247826726897e-14,
+ '0000010101100110': -1.2793625224779439e-14,
+ '0000010101110011': -1.4384172596125302e-14,
+ '0000010101110111': 1.1566039119866214e-14,
+ '0000010101111000': -1.4699797126146702e-14,
+ '0000010101111111': -4.251602906248569e-14,
+ '0000010110000010': -1.034009239490697e-14,
+ '0000010110001000': -2.1346040560857298e-14,
+ '0000010110001110': -1.545137730177002e-14,
+ '0000010110010001': -1.1272832220266937e-14,
+ '0000010110101111': -1.0434188452812932e-14,
+ '0000010110110001': 1.4222310884509096e-14,
+ '0000010110111111': -3.2549278515175315e-14,
+ '0000010111001100': -1.2131201317342403e-14,
+ '0000010111011000': -1.1448107569698957e-14,
+ '0000010111011111': -1.2010185234085842e-14,
+ '0000010111100001': -1.0522581379802352e-14,
+ '0000010111101100': -1.3196738117117496e-14,
+ '0000010111110000': -1.8855184222928918e-14,
+ '0000010111110001': 1.1829535970635852e-14,
+ '0000010111110111': -1.8161367806549548e-14,
+ '0000010111111000': 1.3363929164080237e-14,
+ '0000010111111011': -1.0587118240748148e-14,
+ '0000010111111100': -1.1535573132434372e-14,
+ '0000011000000000': 1.4577931272933627e-14,
+ '0000011000000001': 1.0924372332536492e-14,
+ '0000011000000010': 1.0441613737340823e-14,
+ '0000011000001000': -4.2132280462487905e-14,
+ '0000011000100000': 1.4936522783525727e-14,
+ '0000011000100010': 1.506088016512055e-14,
+ '0000011000100110': -2.820191997128734e-14,
+ '0000011000100111': 1.5435832397201476e-14,
+ '0000011000101110': -1.0251086945210768e-14,
+ '0000011000110011': 4.1810441282153675e-14,
+ '0000011000110111': 1.0540345051395928e-14,
+ '0000011001000000': -3.1806876010956994e-14,
+ '0000011001001100': 1.4587228936646787e-14,
+ '0000011001010011': 1.114880616438251e-14,
+ '0000011001011111': 1.0346755598735019e-14,
+ '0000011001100011': 1.0944640121847752e-14,
+ '0000011001100110': -3.6370670341036326e-14,
+ '0000011001100111': -1.9249783734993297e-14,
+ '0000011001101010': -1.3141795636878747e-14,
+ '0000011001101101': 1.211000032999879e-14,
+ '0000011001101111': 1.8249394251838382e-14,
+ '0000011001110000': -1.4221734662209806e-14,
+ '0000011001110011': -2.3825888203185338e-14,
+ '0000011001110101': -1.1399656247260609e-14,
+ '0000011001110110': -2.1446022385300368e-14,
+ '0000011001111011': -1.0510911383397017e-14,
+ '0000011001111110': 1.5972505482933408e-14,
+ '0000011001111111': -1.3470248793968381e-14,
+ '0000011010000000': -3.1635685366119104e-14,
+ '0000011010011000': -1.2631409447894036e-14,
+ '0000011010100000': 1.2195522020379307e-14,
+ '0000011010100110': -1.286975615595979e-14,
+ '0000011010101111': -1.1206171730320737e-14,
+ '0000011010110111': 1.6646831301689907e-14,
+ '0000011010111011': 1.6048172979751868e-14,
+ '0000011011000010': 1.1015629728300858e-14,
+ '0000011011000100': 2.0077164088823596e-14,
+ '0000011011001000': 1.5191309623146164e-14,
+ '0000011011001110': -2.315909827851275e-14,
+ '0000011011010111': 1.3338219260499149e-14,
+ '0000011011100000': 1.3395932036364566e-14,
+ '0000011011100111': 1.1847489645815096e-14,
+ '0000011011101100': -4.6678975076802076e-14,
+ '0000011011101110': -2.4003146133992604e-14,
+ '0000011011110011': 3.283322299579447e-14,
+ '0000011011110101': 1.172066284391005e-14,
+ '0000011011110111': -2.5745379558880256e-14,
+ '0000011011111010': 1.2845980294934214e-14,
+ '0000011011111011': 1.675966104612263e-14,
+ '0000011011111101': 1.7050959302377773e-14,
+ '0000011011111110': 3.276775812942e-14,
+ '0000011100000000': 2.6842262050826632e-14,
+ '0000011100001001': 1.131117589111061e-14,
+ '0000011100001101': -1.085043119159987e-14,
+ '0000011100010011': 3.188886609146513e-14,
+ '0000011100011010': -1.077115437038315e-14,
+ '0000011100100011': 2.082247624530432e-14,
+ '0000011100110001': 4.733943815101158e-14,
+ '0000011100110011': -3.790796020578598e-14,
+ '0000011100110101': -1.4072879196201443e-14,
+ '0000011100110110': -1.8449436181337634e-14,
+ '0000011100110111': -1.518770746148993e-14,
+ '0000011100111000': -1.1715555195870502e-14,
+ '0000011100111111': -2.5428181140131826e-14,
+ '0000011101001110': 1.0409111639382144e-14,
+ '0000011101010000': -1.3562120600862794e-14,
+ '0000011101010001': 1.362563507978302e-14,
+ '0000011101010011': -1.4499516408941006e-14,
+ '0000011101010101': -1.0653835752859365e-14,
+ '0000011101010111': -1.1605239111733698e-14,
+ '0000011101100000': -1.25198391985598e-14,
+ '0000011101101111': 1.468408892854169e-14,
+ '0000011101110000': -1.3646917896884437e-14,
+ '0000011101110001': -1.0321977834192817e-14,
+ '0000011101110101': 1.2025277615110975e-14,
+ '0000011101110110': 1.2135038081862724e-14,
+ '0000011101110111': -1.3447543105400281e-14,
+ '0000011101111110': 2.7711313894642265e-14,
+ '0000011101111111': 4.743170943600651e-14,
+ '0000011110001000': -1.454934573579091e-14,
+ '0000011110110111': -1.0551195296055774e-14,
+ '0000011111000100': -1.0027902810840198e-14,
+ '0000011111011111': -1.378040673121088e-14,
+ '0000011111101110': 2.860095662620942e-14,
+ '0000011111110111': 5.4687515789505977e-14,
+ '0000011111111110': 1.096518768313595e-14,
+ '0000011111111111': 9.65110492187469e-14,
+ '0000100000000000': 6.57585707071593e-14,
+ '0000100000000001': -7.620099938856419e-14,
+ '0000100000000010': -7.71351389359615e-14,
+ '0000100000000011': -3.294126161731146e-14,
+ '0000100000000100': -1.4092276965787785e-13,
+ '0000100000000101': -2.6933169117519767e-14,
+ '0000100000000110': 1.757983102158222e-14,
+ '0000100000001000': -4.0097104056402354e-14,
+ '0000100000001001': -2.672102943561635e-14,
+ '0000100000001101': 2.4423690684624993e-14,
+ '0000100000001110': 3.153692431962532e-14,
+ '0000100000001111': -1.7956326931769627e-14,
+ '0000100000010011': 4.534812372287897e-14,
+ '0000100000010111': 2.032463827944062e-14,
+ '0000100000011001': 1.3038164628540892e-14,
+ '0000100000011111': 1.525018764956204e-14,
+ '0000100000100000': -3.496238069933698e-14,
+ '0000100000100010': 2.5799366264051692e-14,
+ '0000100000100011': 2.1721560000882686e-14,
+ '0000100000100111': -1.0047034318113297e-14,
+ '0000100000110000': -2.2468391378986096e-14,
+ '0000100000110001': -2.6295523227076733e-14,
+ '0000100000110011': 3.193333092501102e-14,
+ '0000100000110111': 2.1591678258408385e-14,
+ '0000100000111000': -1.291580646309963e-14,
+ '0000100000111011': 1.1501800920119534e-14,
+ '0000100000111111': 3.369158622228582e-14,
+ '0000100001000000': -9.13666460775699e-14,
+ '0000100001000001': -3.6426511497360543e-14,
+ '0000100001000010': -1.4869307012517556e-14,
+ '0000100001000100': -2.7507272013592846e-14,
+ '0000100001000111': 1.1827756063751963e-14,
+ '0000100001001001': -1.0388229942635828e-14,
+ '0000100001001100': 2.7677690252958613e-14,
+ '0000100001001101': -1.4045521357805109e-14,
+ '0000100001001110': -2.6004334343920237e-14,
+ '0000100001010000': -1.626682966478026e-14,
+ '0000100001010011': 1.359059525870898e-14,
+ '0000100001010100': -1.1495066775200539e-14,
+ '0000100001011111': 1.283020579734491e-14,
+ '0000100001100000': -1.1660563256671445e-14,
+ '0000100001100001': 1.0707500893244264e-14,
+ '0000100001110000': 1.8745246117591674e-14,
+ '0000100001110111': 1.5907317120797768e-14,
+ '0000100001111101': 1.1407100494457129e-14,
+ '0000100010000000': 2.8082449241810767e-14,
+ '0000100010000001': -1.0991094862475743e-13,
+ '0000100010000010': -5.4152952579680237e-14,
+ '0000100010000011': -1.8848350495016725e-14,
+ '0000100010000101': -1.9347421357366992e-14,
+ '0000100010001000': 2.0118561673522935e-13,
+ '0000100010001001': -7.789795025229419e-14,
+ '0000100010001010': -3.881829425044904e-14,
+ '0000100010001011': -4.084693368654666e-14,
+ '0000100010001100': 2.9735208196542555e-14,
+ '0000100010001110': -5.676255104393143e-14,
+ '0000100010001111': 4.1138735029575685e-14,
+ '0000100010010000': -2.771752523897473e-14,
+ '0000100010010001': 3.158201468598984e-14,
+ '0000100010010101': 1.1132449412616424e-14,
+ '0000100010011000': -7.02806727060162e-14,
+ '0000100010011001': 3.061588757582108e-14,
+ '0000100010011010': -1.4671753824708343e-14,
+ '0000100010011100': -2.055980627619862e-14,
+ '0000100010011101': 1.9204827348882348e-14,
+ '0000100010011110': 1.955337222130242e-14,
+ '0000100010100000': -4.3012003298043007e-14,
+ '0000100010100110': 1.5056524893433738e-14,
+ '0000100010101000': -3.5283854419676434e-14,
+ '0000100010101100': -1.2773322000765437e-14,
+ '0000100010101101': 1.9505762632412426e-14,
+ '0000100010101110': 3.861661915928304e-14,
+ '0000100010110000': 1.4443150152023856e-14,
+ '0000100010110111': 1.8575520620152143e-14,
+ '0000100010111000': -1.3835495872233238e-14,
+ '0000100010111001': -1.2180366433456596e-14,
+ '0000100010111011': -1.1966979412176637e-14,
+ '0000100010111111': -2.176191658772421e-14,
+ '0000100011000000': -3.644348002099825e-14,
+ '0000100011000001': -3.220161280932724e-14,
+ '0000100011000011': 1.886054062891546e-14,
+ '0000100011000100': 4.4395701440642906e-14,
+ '0000100011000110': -1.1267805725073087e-14,
+ '0000100011000111': 1.163389117095607e-14,
+ '0000100011001010': -1.0580545769725284e-14,
+ '0000100011001011': 1.779073067864907e-14,
+ '0000100011001100': -7.714063662658223e-14,
+ '0000100011001101': 1.0895921945932086e-14,
+ '0000100011001110': -1.0824292743723386e-14,
+ '0000100011001111': -6.243938263085777e-14,
+ '0000100011010000': 1.4430592964018447e-14,
+ '0000100011010001': 1.609709053155697e-14,
+ '0000100011010111': -1.1948773027271831e-14,
+ '0000100011011000': -2.0908060686492967e-14,
+ '0000100011011100': -2.6893437085720165e-14,
+ '0000100011011111': -1.1386622722319331e-14,
+ '0000100011100000': 2.6366160709169933e-14,
+ '0000100011100001': 1.661035141449246e-14,
+ '0000100011100010': 2.8690494375168894e-14,
+ '0000100011100100': 3.305452845411823e-14,
+ '0000100011100110': 1.1548339912500446e-14,
+ '0000100011100111': -2.2451533371941316e-14,
+ '0000100011101000': 1.981860324917215e-14,
+ '0000100011101001': 1.6166481972067737e-14,
+ '0000100011101010': 1.310098797189201e-14,
+ '0000100011101011': -2.0342170870340738e-14,
+ '0000100011101101': -1.45067631891924e-14,
+ '0000100011101110': -2.103167557980531e-14,
+ '0000100011101111': -8.509942373599857e-14,
+ '0000100011110011': 3.6113464103971765e-14,
+ '0000100011111011': -6.325419736967699e-14,
+ '0000100011111101': -5.920793220366298e-14,
+ '0000100011111110': -1.0886281087747028e-14,
+ '0000100011111111': 1.729131679164206e-13,
+ '0000100100000000': 3.689062796035053e-14,
+ '0000100100000001': -1.5187652735884367e-14,
+ '0000100100000010': -1.8449613899672345e-14,
+ '0000100100000011': 2.4646123399604167e-14,
+ '0000100100000110': -1.224302671276347e-14,
+ '0000100100001000': 1.4074209780077224e-14,
+ '0000100100001010': -1.2378096979965511e-14,
+ '0000100100001100': -2.024967637594346e-14,
+ '0000100100010000': -5.3329266771083916e-14,
+ '0000100100010001': 1.4267942012732054e-14,
+ '0000100100010010': 1.598700198519156e-14,
+ '0000100100010011': 1.1529526621693359e-14,
+ '0000100100010111': -1.9794198239681526e-14,
+ '0000100100011000': -1.9257014631452344e-14,
+ '0000100100011001': 1.0316216183709142e-14,
+ '0000100100100000': -1.115080841611199e-14,
+ '0000100100100011': 1.4720235715378213e-14,
+ '0000100100110011': 1.0436078988156888e-14,
+ '0000100100111010': -1.1425997255413976e-14,
+ '0000100100111110': -1.0365363638434923e-14,
+ '0000100101000100': -1.3307070505606284e-14,
+ '0000100101010000': -1.2396038838799279e-14,
+ '0000100101010001': -1.0003673921007058e-14,
+ '0000100101011111': 1.4172166682519853e-14,
+ '0000100101100111': 1.2010490182448e-14,
+ '0000100101110111': 1.961164988306212e-14,
+ '0000100101111110': 1.7327022073848633e-14,
+ '0000100101111111': -3.1335422567373716e-14,
+ '0000100110000000': 2.6800075610577043e-14,
+ '0000100110000010': -1.3782307802318101e-14,
+ '0000100110000011': 1.1128330321595914e-14,
+ '0000100110001000': -1.842080216185077e-14,
+ '0000100110001001': 1.5145415042380892e-14,
+ '0000100110001010': -1.2010039000905999e-14,
+ '0000100110001100': -3.235793795546088e-14,
+ '0000100110010000': -3.1523416085444205e-14,
+ '0000100110010011': 1.1249569048701555e-14,
+ '0000100110011111': 2.7885818561062343e-14,
+ '0000100110101000': -1.3214077378482367e-14,
+ '0000100110101100': -1.0475521429375976e-14,
+ '0000100110110001': 1.0653673234756002e-14,
+ '0000100110111001': -1.6279478992850465e-14,
+ '0000100110111101': 1.3695807321688001e-14,
+ '0000100111000000': 2.5907158045228908e-14,
+ '0000100111001000': -2.0745378395176162e-14,
+ '0000100111010111': 1.1894060123966173e-14,
+ '0000100111101011': -1.1304900946721599e-14,
+ '0000100111101110': 1.2065064538027208e-14,
+ '0000100111110000': -1.0680745345316648e-14,
+ '0000100111110001': 1.541005082447855e-14,
+ '0000100111110111': -1.8843955867136852e-14,
+ '0000100111111110': -2.4567623710919026e-14,
+ '0000100111111111': 2.6077889652591453e-14,
+ '0000101000000000': 2.660821578422163e-14,
+ '0000101000000001': -1.0628261033567283e-14,
+ '0000101000000011': 1.0044335125801926e-14,
+ '0000101000000100': -1.2595301551444078e-14,
+ '0000101000001000': -1.435548232733058e-14,
+ '0000101000010011': 1.0539457336513973e-14,
+ '0000101000100000': 1.5616604856099862e-14,
+ '0000101000101110': -1.053493456571391e-14,
+ '0000101000110111': 1.76619379492899e-14,
+ '0000101001000000': -1.3852545240574022e-14,
+ '0000101001000100': -1.257420310182108e-14,
+ '0000101001011001': -1.5824580124451638e-14,
+ '0000101001011010': 1.2185017895077239e-14,
+ '0000101001100000': -1.0510859242371225e-14,
+ '0000101001100010': 1.322486325950261e-14,
+ '0000101001100110': -1.0658873519872562e-14,
+ '0000101001100111': 1.3891945191906864e-14,
+ '0000101010000000': -2.5183902975926818e-14,
+ '0000101010001000': -1.940258782355581e-14,
+ '0000101010001100': -1.77408580120091e-14,
+ '0000101010001110': -1.617034830694264e-14,
+ '0000101010011000': -1.689380939363914e-14,
+ '0000101010110001': 1.1480621603334301e-14,
+ '0000101010111111': 1.0155588338323073e-14,
+ '0000101011000100': 1.2241625940060768e-14,
+ '0000101011000111': -1.1330043495937528e-14,
+ '0000101011001100': 2.8266778922853526e-14,
+ '0000101011010000': -1.1627121043344009e-14,
+ '0000101011010111': 1.047365311720498e-14,
+ '0000101011011111': 3.225695985030565e-14,
+ '0000101011100110': 2.1161553703298555e-14,
+ '0000101011101100': -1.3542483447337155e-14,
+ '0000101011101110': 1.2124084822540529e-14,
+ '0000101011110011': 1.9147953658097102e-14,
+ '0000101011110101': 1.2754094540609599e-14,
+ '0000101011110110': 1.3944783185316838e-14,
+ '0000101011111101': 1.1862896050308909e-14,
+ '0000101011111110': 1.634491692507637e-14,
+ '0000101011111111': -2.7949471249221264e-14,
+ '0000101100000000': 4.3380361468840166e-14,
+ '0000101100011011': 1.190130264831429e-14,
+ '0000101100101001': -1.0596479450540456e-14,
+ '0000101100110000': 1.79605557627026e-14,
+ '0000101100110100': -1.0876164081445691e-14,
+ '0000101100111000': -1.5101507286841456e-14,
+ '0000101100111001': 1.2802063950289266e-14,
+ '0000101100111011': -2.0603535163422252e-14,
+ '0000101100111101': -1.2887023330177322e-14,
+ '0000101100111111': -1.6465899879910175e-14,
+ '0000101101000000': 1.384083664309752e-14,
+ '0000101101001010': -1.0514176514748733e-14,
+ '0000101101110000': -1.2126497711899305e-14,
+ '0000101101110111': -1.4116427697775281e-14,
+ '0000101101111111': 1.3444272789163862e-14,
+ '0000101110000000': 1.429385791792368e-14,
+ '0000101110001000': -2.7890373529193464e-14,
+ '0000101110101000': -1.2123238719226532e-14,
+ '0000101110101101': -1.0994097672110468e-14,
+ '0000101110110001': 1.0001717263613803e-14,
+ '0000101110111111': -3.040802823815176e-14,
+ '0000101111000010': -1.0855242157820398e-14,
+ '0000101111001111': 1.0687386434436366e-14,
+ '0000101111011101': -1.312488550543073e-14,
+ '0000101111110111': 3.7098711876942457e-14,
+ '0000101111111100': -1.3379855856068189e-14,
+ '0000101111111111': 3.386821199250087e-14,
+ '0000110000000000': -1.9197151814123413e-14,
+ '0000110000000001': -4.6870093610555485e-14,
+ '0000110000000010': -4.7134449624466115e-14,
+ '0000110000000011': 2.75832857761219e-14,
+ '0000110000000100': -4.678374859845764e-14,
+ '0000110000000111': 1.7747916905974744e-14,
+ '0000110000001000': -1.3185240121488991e-14,
+ '0000110000001010': -1.3404184649456365e-14,
+ '0000110000001011': 1.3905256571932204e-14,
+ '0000110000001100': -1.327683870025467e-14,
+ '0000110000001101': -1.77505599135484e-14,
+ '0000110000001110': -2.0007987587545178e-14,
+ '0000110000010000': 2.3289957134172946e-14,
+ '0000110000010001': -1.102318629740114e-14,
+ '0000110000010011': 1.0486247558946295e-14,
+ '0000110000011011': 1.2033183821087664e-14,
+ '0000110000011101': 1.1230177587157445e-14,
+ '0000110000110010': 1.210471186964243e-14,
+ '0000110000111111': 1.5995003084032236e-14,
+ '0000110001000000': -3.951190956789079e-14,
+ '0000110001000010': -1.0918677468976015e-14,
+ '0000110001000100': -3.296553898118786e-14,
+ '0000110001000110': 1.2984417810648852e-14,
+ '0000110001000111': 1.7555491084460028e-14,
+ '0000110001001001': -1.5717107544299066e-14,
+ '0000110001001110': -1.0372401552604105e-14,
+ '0000110001001111': -3.28441901657187e-14,
+ '0000110001010000': 2.1301576646501414e-14,
+ '0000110001010100': 1.157046288581235e-14,
+ '0000110001100000': -1.564736581892924e-14,
+ '0000110001100001': 2.0101635591570652e-14,
+ '0000110001100010': 2.237617827162912e-14,
+ '0000110001100100': 1.8028233542765648e-14,
+ '0000110001101110': 2.230026031000932e-14,
+ '0000110001110111': 2.3062969102133683e-14,
+ '0000110001111100': -1.0096047368314961e-14,
+ '0000110010000000': 1.0149360932171188e-14,
+ '0000110010000101': -1.692932237472221e-14,
+ '0000110010001001': -2.3575403247833367e-14,
+ '0000110010001010': -1.0408369416278675e-14,
+ '0000110010001100': 1.7686923099639872e-14,
+ '0000110010001101': -1.7061713638122826e-14,
+ '0000110010001110': -3.837813911892093e-14,
+ '0000110010001111': -3.155869597214455e-14,
+ '0000110010010000': 2.4564185333867628e-14,
+ '0000110010010001': 1.4182638263272874e-14,
+ '0000110010011000': -2.914276916928613e-14,
+ '0000110010011011': -1.1648852447330199e-14,
+ '0000110010011111': 1.830545024326673e-14,
+ '0000110010101011': -2.0754793903924042e-14,
+ '0000110010110011': 1.2648998718500057e-14,
+ '0000110010110111': 2.0003212325254693e-14,
+ '0000110010111111': 2.916272491458256e-14,
+ '0000110011000000': 2.660881757277136e-14,
+ '0000110011000001': -3.8038870542352004e-14,
+ ...}
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="qubit_operators.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Using QubitOperators</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="citing.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Citing</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, IBM Quantum
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            <div class="last-updated">
+              Last updated on 2026/11/03</div>
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Getting started</a><ul>
+<li><a class="reference internal" href="#simple-example">Simple example</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

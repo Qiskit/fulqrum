@@ -1,0 +1,459 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "aee6880a-d666-42a9-8267-2774cfc9da0e",
+   "metadata": {},
+   "source": [
+    "# Subspace Hamiltonians\n",
+    "\n",
+    "Once one has a qubit operator and subspace in hand, it is time to construct the corresponding `SubspaceHamiltonian` object that is used to build matrix representations of the Hamiltonian confied to the given subspace or provide the matrix-vector product operation for matrix-free evaluation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "3834acb2-579c-4f13-b1d6-d12c876e98eb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import scipy.sparse.linalg as spla\n",
+    "import fulqrum as fq"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fded8201-cad3-4aeb-b404-00e608686db3",
+   "metadata": {},
+   "source": [
+    "To begin, let us import a Fermionic operator for `LiH` from a JSON file and convert it to a qubit operator:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "8946ce51-1eb8-4074-90c9-87382ab11a5e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fop = fq.FermionicOperator.from_json(\"./data/lih.json\")\n",
+    "op = fop.extended_jw_transformation()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e2df2b2e-5c32-49bc-a3a1-6bcdc1610ee7",
+   "metadata": {},
+   "source": [
+    "This operator is small, consisting of only 12 qubits:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "cf2af0d1-726d-4a92-8149-1b4084f41eee",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "12"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "op.width"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "57c5d20c-601d-4412-9e97-66ed2c83c55e",
+   "metadata": {},
+   "source": [
+    "so we can construct the subspace that spans the full Hilbert space:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "c4d64f77-8e53-4557-9478-30d5e86aa834",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "counts = []\n",
+    "for kk in range(2**op.width):\n",
+    "    counts.append(bin(kk)[2:].zfill(op.width))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "752677e7-1350-4b62-933f-ce397181206a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "S = fq.Subspace([counts])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f40dd9a5-765b-42c9-8e37-4696634b2381",
+   "metadata": {},
+   "source": [
+    "## Constucting subspace Hamiltonians"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a23de151-a599-4d9b-b4df-4abaea2f3a47",
+   "metadata": {},
+   "source": [
+    "To build a `SubspaceHamiltonian` object one needs, at minimum, a qubit operator (Hamiltonian) and usually a corresponding subspace in which the operator is to be projected:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "a109b53e-a540-4d07-beef-27e24f2389c5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Hsub = fq.SubspaceHamiltonian(op, S)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "150e997c-d888-47fb-a038-126263d29d5e",
+   "metadata": {},
+   "source": [
+    "when this object is constructed a collection of transformations are applied to the input Hamiltonian that optimize it for evaluating its matrix-elements efficiently.  This object is also a subclass of the `scipy.sparse.linalg.LinearOperator` class, allowing it to be used for matrix-free computations in those routines that support this interface."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5f5279cd-144b-4e85-ad55-1884bc2d9bea",
+   "metadata": {},
+   "source": [
+    "## Using subspace Hamiltonians\n",
+    "\n",
+    "Having built a `SubspaceHamiltonian` we can now put it to work to solve eigenvalue equations of interest, e.g. finding the gound state energy of our molecule."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4aac10d3-c9df-4186-ab77-c24fed143d85",
+   "metadata": {},
+   "source": [
+    "To begin, lets construct a CSR matrix for the Hamiltonian within the subspace:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "5aac7127-8fd6-4f04-a04b-1c97108594e8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A = Hsub.to_csr_linearoperator()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3e2944d2-892e-4210-9323-b03b91d1ced3",
+   "metadata": {},
+   "source": [
+    "Note that we call this a \"linearoperator\" because it is actually a `scipy.sparse.linalg.LinearOperator` wrapper around the CSR matrix."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "346ca13d-24ad-4fc9-ab15-4587cfe9f59a",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<Compressed Sparse Row sparse array of dtype 'float64'\n",
+       "\twith 102400 stored elements and shape (4096, 4096)>"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "A.matrix"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b04aac70-fb7c-40f5-b579-660b3157d8a8",
+   "metadata": {},
+   "source": [
+    "This allows us to perform the matrix-vector product using OpenMP, and thus accelerate the operation. This can then be passed onto a classical eigensolver for evaluation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "62685c42-737d-4546-b781-ef173cef2f83",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-7.87565256])"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "evals, evecs = spla.eigsh(A, k=1, which=\"SA\")\n",
+    "evals"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5ea92ed7-827d-4fbc-829e-d52673356d6d",
+   "metadata": {},
+   "source": [
+    "There is also a \"fast\" version of this CSR matrix building, that is faster than the standard method, at the expense of using 2x the memory.  **This is likely the best method to try first**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "2c3d4e32-d256-4e1f-bd59-fd1161119418",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "B = Hsub.to_csr_linearoperator_fast()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "59df1080-e313-4389-9149-35bd7e29ddbb",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-7.87565256])"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "evals, evecs = spla.eigsh(B, k=1, which=\"SA\")\n",
+    "evals"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c5b61775-7fad-4a82-90cb-3e4b5aaedb9e",
+   "metadata": {},
+   "source": [
+    "Finally, we can pass the entire `SubspaceHamiltonian` to the eigensolver itself to perform matrix-free evaluation.  This avoids any memory allocation for the operator itself, but comes at the cost of extended runtime.  The result of course will be identical:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "a9e9ed3f-a745-4503-bf7f-54e319c817af",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-7.87565256])"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "evals, evecs = spla.eigsh(Hsub, k=1, which=\"SA\")\n",
+    "evals"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0c78b204-53a6-4254-be59-75bd43a87c94",
+   "metadata": {},
+   "source": [
+    "## Extracting eigenvectors\n",
+    "\n",
+    "After one or more eigenvectors is found they are expressed in an ordering that is determined by the order of the bit-strings in the `Subspace`.  As this ordering may not be apparent, it is best to use `interpret_vector` to get the dictionary representation of the eigenvectors"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "40419efe-24bd-42a5-8ed0-b576797ce34f",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'000011000011': -0.9910173117453536,\n",
+       " '000011000101': -0.02918794780819522,\n",
+       " '000011100100': -0.002673972912904316,\n",
+       " '000101000011': -0.02918794780819426,\n",
+       " '000101000101': 0.019826077625098082,\n",
+       " '000101100001': -0.04201893916001963,\n",
+       " '000101100010': 0.0012816405415078057,\n",
+       " '000110000110': 0.0035432760522673486,\n",
+       " '000110100001': 0.003955613454412123,\n",
+       " '000110100010': 0.0014842102082854953,\n",
+       " '001001001001': 0.03569933738960821,\n",
+       " '001001001010': -0.002926474405921016,\n",
+       " '001010001001': -0.00292647440592103,\n",
+       " '001010001010': 0.0017410118768494747,\n",
+       " '010001010001': 0.0356993373896089,\n",
+       " '010001010010': -0.002926474405921001,\n",
+       " '010010010001': -0.0029264744059210065,\n",
+       " '010010010010': 0.0017410118768494704,\n",
+       " '100001000101': -0.042018939160019794,\n",
+       " '100001000110': 0.003955613454412125,\n",
+       " '100001100001': 0.09790814669617735,\n",
+       " '100001100010': -0.002784758898105224,\n",
+       " '100010000101': 0.0012816405415078354,\n",
+       " '100010000110': 0.0014842102082854912,\n",
+       " '100010100001': -0.002784758898105244,\n",
+       " '100100000011': -0.0026739729129043057}"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Hsub.interpret_vector(evecs, atol=1e-3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fa22f256-7deb-433e-a896-f4222f7977bc",
+   "metadata": {},
+   "source": [
+    "Here we use the `atol` keyword argument to select only those bit-strings with amplitudes greater than the absolute tolerance value.  Recall that the absolute value of the amplitudes squared is the corresponding probability. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5bb66c2d-924e-4dfe-a89c-babd793728c5",
+   "metadata": {},
+   "source": [
+    "## Updating the subspace in a `SubspaceHamiltonian`\n",
+    "\n",
+    "Initialization of a `SubspaceHamiltonian` performs several transformations on the input Hamiltonian.  These transformations take some amount of time, and this time can add up if using multiple subspaces for the same operator.  To avoid this overhead, it is best to update the subspace for a pre-existing `SubspaceHamiltonian`, as opposed to creating an entire new one.\n",
+    "\n",
+    "Tol show how this works, lets create a subspace Hamiltonian with no subspace:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "a0b588d0-591d-40d4-ac2a-e4263bb48f57",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Hsub2 = fq.SubspaceHamiltonian(op)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "674e6704-e3c0-4124-9b04-fcba455374f2",
+   "metadata": {},
+   "source": [
+    "It is impossible to use `Hsub2` as it stands now, but we can update the subspace and use it like before:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "d63819d9-d196-4082-97e5-e82aabac4ce4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Hsub2.update_subspace(S)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "3a263992-c71e-467a-ab80-54b33e19da02",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-7.87565256])"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "evals, evecs = spla.eigsh(Hsub2, k=1, which=\"SA\")\n",
+    "evals"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8f0fccec-0bf3-4d2f-8423-56f8133adabe",
+   "metadata": {},
+   "source": [
+    "The subspace can be updated as many times as needed."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d23aae18-4e1b-4b08-8230-b08607e54e2d",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.14.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
