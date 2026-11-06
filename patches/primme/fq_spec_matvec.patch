@@ -1,0 +1,462 @@
+diff --git a/src/eigs/auxiliary_eigs.c b/src/eigs/auxiliary_eigs.c
+index 80f4a42..78ac99d 100644
+--- a/src/eigs/auxiliary_eigs.c
++++ b/src/eigs/auxiliary_eigs.c
+@@ -46,6 +46,13 @@
+ #include "auxiliary_eigs.h"
+ #endif
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: a speculative matvec of the next correction (host_spec.cpp) that
++ * still runs is discarded before another matvec. It is weak, thus it can be
++ * absent. */
++extern int fq_primme_spec_drain(primme_params *primme) __attribute__((weak));
++#endif
++
+ #ifdef SUPPORTED_TYPE
+ 
+ #ifdef USE_DOUBLE
+@@ -194,6 +201,14 @@ int matrixMatvec_Sprimme(SCALAR *V, PRIMME_INT nLocal, PRIMME_INT ldV,
+ 
+    double t0 = primme_wTimer();
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   if (fq_primme_spec_drain) {
++      int fq_err = fq_primme_spec_drain(primme);
++      CHKERRM(fq_err != 0, PRIMME_USER_FAILURE,
++            "Error returned by 'fq_primme_spec_drain' %d", fq_err);
++   }
++#endif
++
+    /* Cast V and W */
+ 
+    SCALAR *Vb = &V[ldV * basisSize], *Wb = &W[ldW * basisSize];
+diff --git a/src/eigs/correction.c b/src/eigs/correction.c
+index df54eff..7601917 100644
+--- a/src/eigs/correction.c
++++ b/src/eigs/correction.c
+@@ -47,6 +47,13 @@
+ #include "auxiliary_eigs.h"
+ #endif
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: the correction of a speculative matvec, see
++ * fulqrum/gpu/eigensolver/host_spec.cpp. It is weak, thus it can be absent. */
++extern int fq_primme_spec_take(double shift, double eps, int precond)
++      __attribute__((weak));
++#endif
++
+ #ifdef SUPPORTED_TYPE
+ 
+ /*******************************************************************************
+@@ -339,7 +346,27 @@ int solve_correction_Sprimme(SCALAR *V, PRIMME_INT ldV, SCALAR *W,
+       SCALAR *r = &W[ldW*basisSize];    /* All the block residuals    */
+       SCALAR *x = &V[ldV*basisSize];    /* All the block Ritz vectors */
+       SCALAR *Bx = &BV[ldBV*basisSize]; /* B*x                        */
+-      
++
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++      /* Fulqrum: when the speculative matvec computed this correction     */
++      /* (the same shift, Olsen eps and preconditioner), it is taken and   */
++      /* main_iter orthogonalizes it from its buffer.                      */
++      if (fq_primme_spec_take && blockSize == 1 &&
++            !(primme->correctionParams.projectors.RightX &&
++                  primme->correctionParams.projectors.SkewX)) {
++         int fq_precond = primme->correctionParams.precondition &&
++                          primme->applyPreconditioner;
++         int fq_olsen = primme->correctionParams.projectors.RightX &&
++                        (fq_precond || Bx != x ||
++                              (primme->locking &&
++                                    primme->orth == primme_orth_implicit_I));
++         if (fq_primme_spec_take(blockOfShifts[0],
++                   fq_olsen ? approxOlsenEps[0] : 0.0, fq_precond) == 0) {
++            goto fq_correction_done;
++         }
++      }
++#endif
++
+       if ( primme->correctionParams.projectors.RightX &&
+            primme->correctionParams.projectors.SkewX    ) {    
+            /* Compute exact Olsen's projected preconditioner. This is */
+@@ -378,6 +405,9 @@ int solve_correction_Sprimme(SCALAR *V, PRIMME_INT ldV, SCALAR *W,
+          CHKERR(applyPreconditioner_Sprimme(r, primme->nLocal, ldW,
+                   x, ldV, blockSize, ctx));
+       }
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++fq_correction_done:;
++#endif
+    }
+    /* ------------------------------------------------------------ */
+    /*  JDQMR --- JD inner-outer variants                           */
+diff --git a/src/eigs/main_iter.c b/src/eigs/main_iter.c
+index a8bc5c0..97d1593 100644
+--- a/src/eigs/main_iter.c
++++ b/src/eigs/main_iter.c
+@@ -61,6 +61,41 @@ extern int fq_primme_matvec_input_done(primme_params *primme)
+       __attribute__((weak));
+ extern int fq_primme_matvec_wait(primme_params *primme, int accept)
+       __attribute__((weak));
++/* Fulqrum: the speculative matvec of the next correction, see
++ * fulqrum/gpu/eigensolver/host_spec.cpp. They are weak, thus they can be
++ * absent; fq_primme_spec_enabled gates the others. */
++extern int fq_primme_spec_enabled(void) __attribute__((weak));
++extern const double *fq_primme_spec_diag(void) __attribute__((weak));
++extern int fq_primme_spec_buffers(long long n, double **t, double **y)
++      __attribute__((weak));
++extern int fq_primme_spec_begin(long long m, int nV, long long ldV,
++      long long ldW, double theta, double eps) __attribute__((weak));
++extern void fq_primme_spec_cancel(void) __attribute__((weak));
++extern int fq_primme_spec_pass(long long m, int nV, const double *V,
++      long long ldV, const double *W, long long ldW, const double *h,
++      double theta, double eps) __attribute__((weak));
++extern int fq_primme_spec_state(double **t, double **y) __attribute__((weak));
++extern void fq_primme_spec_finished(int kept, int fast) __attribute__((weak));
++extern int fq_primme_spec_drain(primme_params *primme) __attribute__((weak));
++extern int fq_primme_spec_set_pending(int col, const double *c, double rho)
++      __attribute__((weak));
++extern int fq_primme_spec_flush(double *W, long long ldW, long long m)
++      __attribute__((weak));
++extern int fq_primme_spec_cu(long long m, int n, const double *V,
++      long long ldV, const double *W, long long ldW, const double *t,
++      double *c, double *u) __attribute__((weak));
++extern int fq_primme_spec_ortho(long long m, int n, const double *V,
++      long long ldV, const double *t, const double *c, double rho,
++      double *out) __attribute__((weak));
++extern int fq_primme_spec_update(long long m, int n, const double *a,
++      long long lda, const double *c, double rho, const double *y,
++      double *out) __attribute__((weak));
++extern int fq_primme_spec_restore(double *x, long long m)
++      __attribute__((weak));
++extern int fq_primme_spec_matvec_start(double *x, double *y,
++      primme_params *primme) __attribute__((weak));
++extern double fq_primme_matvec_dot(primme_params *primme)
++      __attribute__((weak));
+ #endif
+ #include "update_projection.h"
+ #include "update_W.h"
+@@ -215,6 +250,49 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+                             /* the current extraction method.                */
+    int maxEvecsSize;        /* Maximum capacity of evecs array               */
+    int numPrevRitzVals = 0; /* Size of the prevRitzVals updated in correction*/
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   /* Fulqrum: the speculative matvec of the next correction (host_spec.cpp) */
++   /* runs for GD+k/Olsen with block size 1, one eigenpair, soft locking,    */
++   /* Rayleigh-Ritz, implicit orthonormality, and no B, orthogonality        */
++   /* constraints or dynamic method switch.                                  */
++   double *fq_spec_t = NULL, *fq_spec_y = NULL;
++   int fq_spec = fq_primme_spec_enabled && fq_primme_spec_enabled() &&
++         fq_primme_matvec_wait && fq_primme_spec_matvec_start &&
++         primme->maxBlockSize == 1 && primme->numEvals == 1 &&
++         !primme->locking && !primme->massMatrixMatvec &&
++         primme->numOrthoConst == 0 && primme->dynamicMethodSwitch <= 0 &&
++         primme->correctionParams.maxInnerIterations == 0 &&
++         primme->projectionParams.projection == primme_proj_RR &&
++         primme->orth == primme_orth_implicit_I &&
++         (primme->target == primme_smallest ||
++               primme->target == primme_largest) &&
++         !primme->correctionParams.robustShifts &&
++         !(primme->correctionParams.projectors.RightX &&
++               primme->correctionParams.projectors.SkewX) &&
++         primme->maxBasisSize <= 64;
++   if (fq_spec) {
++      int fq_precond = primme->correctionParams.precondition &&
++                       primme->applyPreconditioner;
++      /* The pass applies the clamped Jacobi step of host_dense.cpp; another */
++      /* preconditioner turns it off.                                        */
++      if (fq_precond && !(fq_primme_spec_diag && fq_primme_spec_diag()))
++         fq_spec = 0;
++      if (!fq_precond && fq_primme_spec_diag && fq_primme_spec_diag())
++         fq_spec = 0;
++   }
++   if (fq_spec &&
++         fq_primme_spec_buffers(primme->nLocal, &fq_spec_t, &fq_spec_y) != 0) {
++      fq_spec = 0;
++   }
++   if (primme->numProcs > 1 &&
++         fq_primme_spec_enabled && fq_primme_spec_enabled()) {
++      /* Every rank takes the same path: on only if it is on everywhere. */
++      double fq_on = fq_spec ? 1.0 : 0.0;
++      CHKERR(globalSum_dprimme(&fq_on, 1, ctx));
++      fq_spec = fq_on == (double)primme->numProcs;
++   }
++   double fq_spec_eps = 0.0, fq_spec_theta = 0.0;
++#endif
+    int touch=0;             /* param used in inner solver stopping criteria  */
+ 
+    int *perm=NULL;          /* Permutation on the locked pairs */
+@@ -703,10 +781,93 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+             /* the orthogonalization. Then H*x = (H*t - W*c)/rho, with        */
+             /* c = V'*t and rho = sqrt(t'*t - c'*c), gives the new column of  */
+             /* W without a matvec on the critical path.                       */
+-            int fq_overlap = 0, fq_accept = 0;
++            int fq_overlap = 0, fq_accept = 0, fq_taken = 0, fq_fast = 0;
+             HSCALAR *fq_c = NULL;
+             HREAL fq_rho = 0.0;
+-            if (fq_primme_matvec_start && fq_primme_matvec_input_done &&
++            /* Fulqrum: the correction of a running speculative matvec is in */
++            /* its buffer T and the product goes to Y (host_spec.cpp). With  */
++            /* c = V'*t, u = W'*t and rho^2 = t'*t - c'*c, one pass gives    */
++            /* v = (t - V*c)/rho when Gram-Schmidt needs no second pass, and */
++            /* the new column of H is (u - H*c)/rho, its diagonal            */
++            /* (t'*Y - 2c'*u + c'*H*c)/rho^2, with no pass after the matvec. */
++            if (fq_spec && fq_primme_spec_state(NULL, NULL) == 1) {
++               /* The correction differs from the speculative one: discard */
++               double fq_t0 = primme_wTimer();
++               int fq_err = fq_primme_spec_drain(primme);
++               primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++               CHKERRM(fq_err != 0, PRIMME_USER_FAILURE,
++                     "Error returned by 'fq_primme_spec_drain' %d", fq_err);
++            }
++            if (fq_spec && fq_primme_spec_state(NULL, NULL) == 2) {
++               fq_taken = 1;
++            }
++            if (fq_taken && blockSize == 1 && basisSize > 0 &&
++                  Rlocked == NULL && numLocked == 0) {
++               double fq_t0 = primme_wTimer();
++               HSCALAR *fq_u = NULL, *fq_c2 = NULL;
++               HSCALAR *fq_v = &V[ldV * basisSize];
++               CHKERR(Num_malloc_SHprimme(2 * basisSize + 1, &fq_c, ctx));
++               CHKERR(Num_malloc_SHprimme(basisSize + 1, &fq_c2, ctx));
++               fq_u = fq_c + basisSize + 1;
++               CHKERR(fq_primme_spec_cu(primme->nLocal, basisSize, V, ldV, W,
++                     ldW, fq_spec_t, fq_c, fq_u));
++               CHKERR(globalSum_SHprimme(fq_c, 2 * basisSize + 1, ctx));
++               HREAL fq_tt = REAL_PART(fq_c[basisSize]);
++               HREAL fq_cc = REAL_PART(
++                     Num_dot_SHprimme(basisSize, fq_c, 1, fq_c, 1, ctx));
++               /* PRIMME's Gram-Schmidt (Daniel et al., 0.707) passes again  */
++               /* when the norm drops below 0.707 of the norm before the     */
++               /* pass; do the same, with at most two passes, and keep the   */
++               /* product when |t|/rho <= 10, as the overlapped matvec does. */
++               if (ISFINITE(fq_tt) && fq_tt > 0.0 && fq_cc <= 0.5 * fq_tt) {
++                  fq_rho = sqrt(fq_tt - fq_cc);
++                  CHKERR(fq_primme_spec_ortho(primme->nLocal, basisSize, V,
++                        ldV, fq_spec_t, fq_c, fq_rho, fq_v));
++                  fq_fast = 1;
++               } else if (ISFINITE(fq_tt) && fq_tt > 0.0 &&
++                          fq_cc <= 0.99 * fq_tt) {
++                  int fq_j;
++                  CHKERR(fq_primme_spec_ortho(primme->nLocal, basisSize, V,
++                        ldV, fq_spec_t, fq_c, 1.0, fq_v));
++                  CHKERR(Num_gemv_ddh_Sprimme("C", primme->nLocal,
++                        basisSize + 1, 1.0, V, ldV, fq_v, 1, 0.0, fq_c2, 1,
++                        ctx));
++                  CHKERR(globalSum_SHprimme(fq_c2, basisSize + 1, ctx));
++                  HREAL fq_vv = REAL_PART(fq_c2[basisSize]);
++                  HREAL fq_cc2 = REAL_PART(
++                        Num_dot_SHprimme(basisSize, fq_c2, 1, fq_c2, 1, ctx));
++                  if (ISFINITE(fq_vv) && fq_vv > 0.0 &&
++                        fq_cc2 <= 0.5 * fq_vv &&
++                        fq_vv - fq_cc2 >= 0.01 * fq_tt) {
++                     fq_rho = sqrt(fq_vv - fq_cc2);
++                     CHKERR(fq_primme_spec_ortho(primme->nLocal, basisSize, V,
++                           ldV, fq_v, fq_c2, fq_rho, fq_v));
++                     for (fq_j = 0; fq_j < basisSize; fq_j++)
++                        fq_c[fq_j] += fq_c2[fq_j];
++                     fq_fast = 1;
++                  }
++               }
++               CHKERR(Num_free_SHprimme(fq_c2, ctx));
++               if (fq_fast) {
++                  fq_accept = 1;
++               } else {
++                  /* PRIMME orthogonalizes t; c = V'*t and t'*t are the   */
++                  /* first basisSize+1 entries of fq_c, as in the overlap. */
++                  CHKERR(fq_primme_spec_restore(fq_v, primme->nLocal));
++               }
++               fq_overlap = 1;
++               primme->stats.timeOrtho += primme_wTimer() - fq_t0;
++            }
++            else if (fq_taken) {
++               CHKERR(fq_primme_spec_restore(&V[ldV * basisSize],
++                     primme->nLocal));
++               CHKERR(Num_malloc_SHprimme(basisSize + 1, &fq_c, ctx));
++               CHKERR(Num_gemv_ddh_Sprimme("C", primme->nLocal, basisSize + 1,
++                     1.0, V, ldV, &V[ldV * basisSize], 1, 0.0, fq_c, 1, ctx));
++               CHKERR(globalSum_SHprimme(fq_c, basisSize + 1, ctx));
++               fq_overlap = 1;
++            }
++            else if (fq_primme_matvec_start && fq_primme_matvec_input_done &&
+                   fq_primme_matvec_wait && blockSize == 1 && basisSize > 0 &&
+                   BV == NULL && Rlocked == NULL &&
+                   primme->numOrthoConst + numLocked == 0) {
+@@ -747,6 +908,9 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+             /* the current basis. If basis hasn't expanded with any new       */
+             /* vector, try a random vector                                    */
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            if (fq_fast) i = 0; else
++#endif
+             for (i=0; i < maxNumRandoms; i++) {
+                int basisSizeOut;
+                CHKERR(Bortho_block_Sprimme(V, ldV, VtBV, ldVtBV, fVtBV, ldfVtBV,
+@@ -766,8 +930,9 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+ #if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
+             /* Fulqrum: keep the product of t when x came from t alone and    */
+             /* the cancellation |t|/rho is at most 10, else discard it.       */
++            HSCALAR *fq_hcol = NULL; /* the new column of H, fast path */
+             if (fq_overlap) {
+-               if (i == 0 && blockSize == 1) {
++               if (!fq_fast && i == 0 && blockSize == 1) {
+                   HREAL fq_tt = REAL_PART(fq_c[basisSize]);
+                   HREAL fq_cc = REAL_PART(
+                         Num_dot_SHprimme(basisSize, fq_c, 1, fq_c, 1, ctx));
+@@ -776,18 +941,61 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+                      fq_accept = 1;
+                   }
+                }
++               if (fq_fast) {
++                  /* H(0:n, n) = (u - H*c)/rho from the upper triangle of H. */
++                  HSCALAR *fq_u = fq_c + basisSize + 1;
++                  int fq_j, fq_k;
++                  CHKERR(Num_malloc_SHprimme(basisSize + 1, &fq_hcol, ctx));
++                  for (fq_j = 0; fq_j < basisSize; fq_j++) {
++                     HSCALAR fq_s = fq_u[fq_j];
++                     for (fq_k = 0; fq_k < basisSize; fq_k++) {
++                        HSCALAR fq_h = fq_j <= fq_k
++                              ? H[primme->maxBasisSize * fq_k + fq_j]
++                              : H[primme->maxBasisSize * fq_j + fq_k];
++                        fq_s -= fq_h * fq_c[fq_k];
++                     }
++                     fq_hcol[fq_j] = fq_s / fq_rho;
++                  }
++               }
+                double fq_t0 = primme_wTimer();
+                int fq_err = fq_primme_matvec_wait(primme, fq_accept);
+                primme->stats.timeMatvec += primme_wTimer() - fq_t0;
+                CHKERRM(fq_err != 0, PRIMME_USER_FAILURE,
+                      "Error returned by 'fq_primme_matvec_wait' %d", fq_err);
+-               if (fq_accept) {
++               if (fq_accept && fq_fast) {
++                  /* v'*H*v = (t'*Y - 2c'*u + c'*Hc)/rho^2 with the dot t'*Y */
++                  /* of the matvec engine (a local sum), and W(:,n) is set   */
++                  /* by the next speculative pass or by the flush.           */
++                  HSCALAR *fq_u = fq_c + basisSize + 1;
++                  HSCALAR fq_d = (HSCALAR)fq_primme_matvec_dot(primme);
++                  CHKERR(globalSum_SHprimme(&fq_d, 1, ctx));
++                  HSCALAR fq_cu = 0.0, fq_chc = 0.0;
++                  int fq_j;
++                  for (fq_j = 0; fq_j < basisSize; fq_j++) {
++                     fq_cu += fq_c[fq_j] * fq_u[fq_j];
++                     /* c'*H*c = c'*(u - rho*hcol) */
++                     fq_chc += fq_c[fq_j] * (fq_u[fq_j] - fq_rho * fq_hcol[fq_j]);
++                  }
++                  fq_hcol[basisSize] =
++                        (fq_d - 2.0 * fq_cu + fq_chc) / (fq_rho * fq_rho);
++                  CHKERR(fq_primme_spec_set_pending(basisSize, fq_c, fq_rho));
++                  primme->stats.numMatvecs += 1;
++                  fq_primme_spec_finished(1, 1);
++               } else if (fq_accept) {
+                   fq_t0 = primme_wTimer();
+-                  CHKERR(Num_gemv_Sprimme("N", primme->nLocal, basisSize,
+-                        -1.0 / fq_rho, W, ldW, fq_c, 1, 1.0 / fq_rho,
+-                        &W[ldW * basisSize], 1, ctx));
++                  if (fq_taken) {
++                     CHKERR(fq_primme_spec_update(primme->nLocal, basisSize, W,
++                           ldW, fq_c, fq_rho, fq_spec_y, &W[ldW * basisSize]));
++                     fq_primme_spec_finished(1, 0);
++                  } else {
++                     CHKERR(Num_gemv_Sprimme("N", primme->nLocal, basisSize,
++                           -1.0 / fq_rho, W, ldW, fq_c, 1, 1.0 / fq_rho,
++                           &W[ldW * basisSize], 1, ctx));
++                  }
+                   primme->stats.timeMatvec += primme_wTimer() - fq_t0;
+                   primme->stats.numMatvecs += 1;
++               } else if (fq_taken) {
++                  fq_primme_spec_finished(0, 0);
+                }
+                CHKERR(Num_free_SHprimme(fq_c, ctx));
+             }
+@@ -908,6 +1116,16 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+             /* Extend H by blockSize columns and rows and solve the */
+             /* eigenproblem for the new H.                          */
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            if (fq_hcol) {
++               if (fq_accept && fq_fast && H) {
++                  CHKERR(Num_copy_matrix_SHprimme(fq_hcol, basisSize + 1, 1,
++                        basisSize + 1, &H[primme->maxBasisSize * basisSize],
++                        primme->maxBasisSize, ctx));
++               }
++               CHKERR(Num_free_SHprimme(fq_hcol, ctx));
++            } else
++#endif
+             if (H)
+                CHKERR(update_projection_Sprimme(V, ldV, W, ldW, H,
+                      primme->maxBasisSize, primme->nLocal, basisSize, blockSize,
+@@ -942,6 +1160,59 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+             numArbitraryVecs = 0;
+             candidates_prepared = 0;
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            /* Fulqrum: the next correction of GD+Olsen with block size 1 is */
++            /* t = K\(W*y - (theta + eps)*V*y) for the first Ritz pair      */
++            /* (theta, y), with eps = |theta - previous theta|. It does not  */
++            /* depend on the restart: compute it now in one pass (which also */
++            /* writes a pending column of W) and start its matvec, so that   */
++            /* the restart, the convergence test and the orthogonalization   */
++            /* run while the GPU works. The correction takes it only when    */
++            /* the shift and eps are the same (fq_primme_spec_take).          */
++            if (fq_spec && basisSize > 0 && numConverged == 0) {
++               fq_spec_theta = hVals[0];
++               fq_spec_eps = 0.0;
++               if (primme->correctionParams.projectors.RightX &&
++                     primme->correctionParams.precondition &&
++                     primme->applyPreconditioner) {
++                  /* The Olsen eps of correction.c: |prev - theta| if a     */
++                  /* previous value of this index exists, else |r|. The     */
++                  /* residual norm is not known yet, so only the first      */
++                  /* case is speculated; prevRitzVals is updated there.     */
++                  fq_spec_eps = numPrevRitzVals > 0
++                        ? fabs(prevRitzVals[0] - hVals[0]) : -1.0;
++               }
++               /* Start the matvec first: its thread copies t to the GPU */
++               /* chunk by chunk while the pass computes it.             */
++               if (fq_spec_eps >= 0.0 &&
++                     fq_primme_spec_begin(primme->nLocal, basisSize, ldV, ldW,
++                           fq_spec_theta, fq_spec_eps) == 0) {
++                  double fq_t0 = primme_wTimer();
++                  int fq_started = fq_primme_spec_matvec_start(
++                        fq_spec_t, fq_spec_y, primme);
++                  primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++                  if (fq_started != 0) fq_primme_spec_cancel();
++                  CHKERRM(fq_started < 0, PRIMME_USER_FAILURE,
++                        "Error returned by 'fq_primme_spec_matvec_start' %d",
++                        fq_started);
++                  if (fq_started == 0) {
++                     fq_t0 = primme_wTimer();
++                     CHKERR(fq_primme_spec_pass(primme->nLocal, basisSize, V,
++                           ldV, W, ldW, hVecs, fq_spec_theta, fq_spec_eps));
++                     primme->stats.timeDense += primme_wTimer() - fq_t0;
++                  }
++               }
++            }
++            /* The pending column of W, (Y - W*c)/rho: the pass folded it in */
++            /* its coefficients; write it now, while the GPU works (the      */
++            /* matvec thread keeps Y until then).                            */
++            if (fq_spec) {
++               double fq_t0 = primme_wTimer();
++               CHKERR(fq_primme_spec_flush(W, ldW, primme->nLocal));
++               primme->stats.timeDense += primme_wTimer() - fq_t0;
++            }
++#endif
++
+             /* If QR decomposition accumulates so much error, force it to     */
+             /* reset by setting targetShiftIndex to -1. We use the next       */
+             /* heuristic. Note that if (s_0, u_0, y_0) is the smallest triplet*/
+@@ -1431,6 +1702,15 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+       * -------------------------------------------------------------- */
+ 
+ clean:
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   /* Fulqrum: wait for a speculative matvec that still runs. */
++   if (fq_spec) {
++      /* The pending column of W reads Y, so write it before the drain lets */
++      /* the running matvec overwrite Y.                                    */
++      CHKERR(fq_primme_spec_flush(W, ldW, primme->nLocal));
++      CHKERR(fq_primme_spec_drain(primme));
++   }
++#endif
+    if (primme->aNorm <= 0.0L) {
+       primme->aNorm =
+             primme->stats.estimateLargestSVal / primme->stats.estimateInvBNorm;

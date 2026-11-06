@@ -38,6 +38,9 @@ include "includes/types.pxi"
 
 from .constants cimport MAX_SIZE_T
 
+cdef extern from "src/subspace.hpp":
+    size_t subspace_find_key(Subspace_t&, const bitset_t&) except +
+
 
 cdef class Subspace():
     """Hashmap representation of a quantum subspace over bit-strings obtained from
@@ -136,97 +139,50 @@ cdef class Subspace():
                 full hashing usually leads to fewer collisions during Hash table look-up.
                 Default: `True`.
         """
+        cdef vector[string] full_strs
+        cdef vector[string] alpha
+        cdef vector[string] beta
+        cdef string text
+        cdef Bitset bit_key
+        self.subspace.configure(reserve_multiplier, use_all_bitset_blocks)
         if not subspace_strs:
             return
-        logger.info("Initializing Subspace")
-        sub_start = time.perf_counter()
-        cdef int input_bitsets = 0
-        cdef vector[string] alpha_strs
-        cdef vector[string] beta_strs
-        cdef size_t size, num_qubits
-        if len(subspace_strs) == 0:
-            logger.info("Empty subspace")
-            return
-        elif len(subspace_strs) == 1:
-            logger.info("Full subspace bit-strings")
+        if len(subspace_strs) == 1:
             iterator = subspace_strs[0]
             iterator.sort()
-            num_qubits = len(next(iter(iterator)))
-            size = len(iterator)
-            if isinstance(iterator[0], Bitset):
-                input_bitsets = 1
+            for value in iterator:
+                if isinstance(value, Bitset):
+                    bit_key = value
+                    to_string(bit_key.bits, text)
+                    full_strs.push_back(text)
+                elif isinstance(value, str):
+                    full_strs.push_back(value)
+                else:
+                    raise ValueError("Subspace inputs must be bitstrings or Bitset objects")
+            self.subspace.initialize_full(full_strs)
         elif len(subspace_strs) == 2:
-            logger.info("Cartesian-product subspace bit-strings")
-            alpha_strs = subspace_strs[0]
-            beta_strs = subspace_strs[1]
-            stdsort(alpha_strs.begin(), alpha_strs.end())
-            stdsort(beta_strs.begin(), beta_strs.end())
-            
-            num_qubits = alpha_strs[0].size() + beta_strs[0].size()
-            size = alpha_strs.size() * beta_strs.size()
+            alpha = subspace_strs[0]
+            beta = subspace_strs[1]
+            stdsort(alpha.begin(), alpha.end())
+            stdsort(beta.begin(), beta.end())
+            self.subspace.initialize_product(alpha, beta)
         else:
             raise ValueError("bitstrings are wrongly formatted")
-
-        if num_qubits > (2 ** 16):
-            raise ValueError(
-                f"Number of qubits must be <= 2 ** 16 ( = {2 ** 16}). "
-                f"Current number of qubits = {num_qubits}"
-            )
-
-        self.subspace.num_qubits = num_qubits
-        self.subspace.size = <size_t>size
-        logger.info("Subspace size: %s", size)
-        logger.info("Number of bits: %s", num_qubits)
-        
-        if not use_all_bitset_blocks:
-            self.subspace.bitstrings = BitsetHashMapWrapper(use_all_bitset_blocks)
-        logger.info("Using all bitset blocks: %s", use_all_bitset_blocks)
-        if reserve_multiplier < 1:
-            raise ValueError(
-                f"`reserve_multiplier(={reserve_multiplier})` must be >= 1"
-            )
-        logger.info("Reserve multiplier: %s", reserve_multiplier)
-        # The +1 is here because insertion would fail for a dim=1 subspace otherwise
-        self.subspace.bitstrings.reserve(self.subspace.size * reserve_multiplier + 1)
-
-        cdef size_t idx, jj, counter=0
-        cdef string key
-        cdef bitset_t temp_bits
-        cdef Bitset bit_key
-
-        if input_bitsets:
-            for idx, bit_key in enumerate(iterator):
-                self.subspace.bitstrings.insert_unique(bit_key.bits, idx)
-        else:
-            if len(subspace_strs) == 1:
-                for idx, key in enumerate(iterator):
-                    temp_bits = bitset_t(key, 0, self.subspace.num_qubits)
-                    self.subspace.bitstrings.insert_unique(temp_bits, idx)
-            else:
-                for idx in range(beta_strs.size()):
-                    for jj in range(alpha_strs.size()):
-                        temp_bits = bitset_t(beta_strs[idx]+alpha_strs[jj], 0, num_qubits)
-                        self.subspace.bitstrings.insert_unique(temp_bits, counter)
-                        counter += 1
-        sub_stop = time.perf_counter()
-        logger.info("Subspace total init time: %s ms", round((sub_stop - sub_start)*1000, 3))
-
-    def __dealloc__(self):
-        # Clear hash table upon deallocation of class
-        self.subspace.bitstrings = BitsetHashMapWrapper()
 
     @cython.boundscheck(False)
     def __getitem__(self, object key):
         if key < 0:
-            key = self.subspace.bitstrings.size() + key
+            key = self.subspace.size + key
+        if key < 0 or key >= self.subspace.size:
+            raise IndexError("Subspace index is out of range")
         cdef size_t idx = <size_t>key
-        cdef bitset_t bits = self.subspace.bitstrings.get_n_th_bitset(idx)
+        cdef bitset_t bits = self.subspace.key_at(idx)
         cdef Bitset out = Bitset()
         out.bits = bits
         return out
 
     def __len__(self):
-        cdef size_t size = self.subspace.bitstrings.size()
+        cdef size_t size = self.subspace.size
         return size
 
     def __repr__(self):
@@ -242,7 +198,7 @@ cdef class Subspace():
         Returns:
             int
         """
-        cdef size_t size = self.subspace.bitstrings.size()
+        cdef size_t size = self.subspace.size
         return size
     
     @property
@@ -255,20 +211,8 @@ cdef class Subspace():
         Returns:
             Subspace
         """
-        cdef Subspace out
-        cdef size_t kk
-        if self.size() > 1:
-            out = Subspace([], use_all_bitset_blocks=self.subspace.bitstrings.use_all_bitset_blocks())
-            out.subspace.bitstrings.reserve(self.subspace.bitstrings.size())
-            out.subspace.num_qubits = self.subspace.num_qubits
-            out.subspace.size = self.subspace.size
-            out.subspace.num_qubits = self.subspace.num_qubits
-            for kk in range(self.subspace.size):
-                out.subspace.bitstrings.insert_unique(self.subspace.bitstrings.get_n_th_bitset(kk), kk)
-        # Copying the data of a size=1 subspace segfaults. This gets around that by creating a new
-        # subspace.  This is not a big deal since there is a single element
-        else:
-            out = Subspace([[self[0].to_string()]], use_all_bitset_blocks=self.subspace.bitstrings.use_all_bitset_blocks())
+        cdef Subspace out = Subspace()
+        self.subspace.copy_to(out.subspace)
         return out
 
 
@@ -286,12 +230,19 @@ cdef class Subspace():
             Orbital occupanies as a length-2 tuple of 1D np.ndarrays.
             It is formatted as ``([a0, ..., aN], [b0, ..., bN])``.
         """
+        if norb < 0 or 2 * norb != self.subspace.num_qubits:
+            raise ValueError("norb must match the two equal spin sectors")
+        if probs.shape[0] != self.subspace.size:
+            raise ValueError("Probability vector length does not match the subspace")
         out = np.zeros(2 * norb, dtype=np.float64)
-
         cdef double[::1] out_mv = out
-        compute_orbital_occupancies(
-            self.subspace.bitstrings, self.subspace.size, &probs[0], &out_mv[0]
-        )
+        cdef bitset_t key
+        cdef size_t row, qubit
+        for row in range(self.subspace.size):
+            key = self.subspace.key_at(row)
+            for qubit in range(self.subspace.num_qubits):
+                if key[qubit]:
+                    out_mv[qubit] += probs[row]
 
         return np.split(out, 2)
 
@@ -313,7 +264,7 @@ cdef class Subspace():
 
         cdef bitset_t bitset
         bitset = bitset_t(bitstring, 0, len(bitstring))
-        index = self.subspace.bitstrings.get(bitset)
+        index = subspace_find_key(self.subspace, bitset)
 
         return None if index == MAX_SIZE_T else index
 
@@ -334,6 +285,8 @@ cdef class Subspace():
         Notes:
             Truncation can be disabled by calling `atol=0`
         """
+        if vec.shape[0] != self.subspace.size:
+            raise ValueError("Vector length does not match the subspace")
         cdef size_t kk
         cdef double abs_val
         cdef double reduced_prob = 0
@@ -341,11 +294,11 @@ cdef class Subspace():
         # cdef bytes py_bytes
         cdef dict out = {}
 
-        for kk in range(self.subspace.bitstrings.size()):
+        for kk in range(self.subspace.size):
             abs_val = abs(vec[kk])
             if abs_val <= atol:
                 continue
-            to_string(self.subspace.bitstrings.get_n_th_bitset(kk), s)
+            to_string(self.subspace.key_at(kk), s)
 
             out[s] = vec[kk]
             reduced_prob += abs_val * abs_val
@@ -371,7 +324,7 @@ cdef class Subspace():
                 dictionary and emhash8::HashMap retains the insertion order.
         """
         cdef string s
-        to_string(self.subspace.bitstrings.get_n_th_bitset(n), s)
+        to_string(self.subspace.key_at(n), s)
         return s
 
 
@@ -383,7 +336,7 @@ cdef class Subspace():
         Returns:
             size_t: Index
         """
-        return self.subspace.bitstrings.get(bitset.bits)
+        return subspace_find_key(self.subspace, bitset.bits)
 
 
     @cython.boundscheck(False)
@@ -407,14 +360,48 @@ cdef class Subspace():
             raise FulqrumError("key_type must be 'bitset' or 'str'")
 
         if key_type == 'bitset':
-            for kk in range(self.subspace.bitstrings.size()):
-                bits = self.subspace.bitstrings.get_n_th_bitset(kk)
+            for kk in range(self.subspace.size):
+                bits = self.subspace.key_at(kk)
                 temp_bits = Bitset()
                 temp_bits.bits = bits
                 out[temp_bits] = None
 
         elif key_type == 'str':
-            for kk in range(self.subspace.bitstrings.size()):
-                to_string(self.subspace.bitstrings.get_n_th_bitset(kk), s)
+            for kk in range(self.subspace.size):
+                to_string(self.subspace.key_at(kk), s)
                 out[s] = None
         return out
+
+    @property
+    def half_strs_mode(self):
+        return self.subspace.product
+
+    @property
+    def num_alpha_qubits(self):
+        return self.subspace.alpha_width
+
+    @property
+    def alpha_strs(self):
+        if not self.subspace.product:
+            return None
+        return [self.subspace.half_string(0, i) for i in range(self.subspace.half_size(0))]
+
+    @property
+    def beta_strs(self):
+        if not self.subspace.product:
+            return None
+        return [self.subspace.half_string(1, i) for i in range(self.subspace.half_size(1))]
+
+    def to_alpha_beta_arrays(self):
+        if not self.subspace.product:
+            raise FulqrumError("to_alpha_beta_arrays() requires a half-string Subspace")
+        if self.subspace.alpha_width > 64 or self.subspace.num_qubits - self.subspace.alpha_width > 64:
+            raise FulqrumError("Each GPU half must have at most 64 qubits")
+        return (np.array([int(s, 2) for s in self.alpha_strs], dtype=np.uint64),
+                np.array([int(s, 2) for s in self.beta_strs], dtype=np.uint64))
+
+    def _storage_state(self):
+        return {"map_materialized": self.subspace.map_materialized,
+                "map_build_count": self.subspace.map_build_count,
+                "full_buffer_words": self.subspace.full_keys.size(),
+                "product": self.subspace.product}

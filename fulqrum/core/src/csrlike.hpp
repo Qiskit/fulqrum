@@ -12,6 +12,7 @@
  * that they have been altered from the originals.
  */
 #pragma once
+#include "checked_size.hpp"
 #include <algorithm>
 #include <complex>
 #include <cstdlib>
@@ -59,12 +60,11 @@ void set_csr_ptr(const std::vector<std::vector<T>>& cols, U* __restrict ptrs)
     std::size_t temp, _sum = 0;
     for(kk = 0; kk < num_rows; kk++)
     {
-        ptrs[kk] = cols[kk].size();
-        temp = _sum + ptrs[kk];
-        ptrs[kk] = _sum;
+        temp = checked_add(_sum, cols[kk].size());
+        ptrs[kk] = checked_index<U>(_sum);
         _sum = temp;
     }
-    ptrs[num_rows] = _sum;
+    ptrs[num_rows] = checked_index<U>(_sum);
 }
 
 /**
@@ -85,6 +85,7 @@ void set_csr_data(std::vector<std::vector<T>>& in_data,
                   T* __restrict out_data)
 {
     std::size_t num_rows = in_data.size();
+    if(num_rows) checked_index<V>(num_rows - 1);
     std::size_t kk;
     std::vector<V> diffs;
     diffs.resize(num_rows);

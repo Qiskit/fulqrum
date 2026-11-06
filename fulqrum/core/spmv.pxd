@@ -12,6 +12,8 @@
 # cython: c_string_type=unicode, c_string_encoding=UTF-8
 from libcpp.vector cimport vector
 from .subspace cimport Subspace
+from .element_evaluator cimport TermMasks
+from .tensor_product_cpu cimport TensorProductCPU, OperatorTables
 from .constants cimport width_t
 
 include "includes/base_header.pxi"
@@ -20,6 +22,13 @@ include "includes/types.pxi"
 cdef class FulqrumSpMV:
     cdef QubitOperator_t oper
     cdef QubitOperator_t diag_oper
+    cdef TermMasks term_masks
+    cdef TermMasks diag_masks
+    cdef OperatorTables tables
+    cdef TensorProductCPU[double]* real_tensor_product_cpu
+    cdef TensorProductCPU[complex]* complex_tensor_product_cpu
+    cdef bool _tensor_product_cpu_built
+
     cdef public double const_energy
     cdef public Subspace subspace
     cdef public size_t subspace_dim
@@ -42,3 +51,7 @@ cdef class FulqrumSpMV:
 
     cpdef int compute_diag_vector(self)
     cpdef void update_subspace(self, Subspace)
+
+    cdef void _prepare_gpu_tables(self) except *
+    cdef bint _prepare_tensor_product_cpu(self) except *
+    cdef _compute_diag_via_blas(self, np.uint64_t[::1], np.uint64_t[::1], size_t, size_t, unsigned int)

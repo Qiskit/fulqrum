@@ -13,5 +13,5 @@
  */
 #pragma once
 
-#define FULQRUM_VERSION "0.4.2"
+#define FULQRUM_VERSION "1.0.0"
 #define JSON_VERSION "1.1"

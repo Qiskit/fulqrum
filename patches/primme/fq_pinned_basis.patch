@@ -1,0 +1,59 @@
+diff --git a/src/linalg/blaslapack.c b/src/linalg/blaslapack.c
+--- a/src/linalg/blaslapack.c
++++ b/src/linalg/blaslapack.c
+@@ -48,8 +48,21 @@
+ #include "blaslapack_private.h"
+ 
+ #ifdef USE_DOUBLE
++#ifndef CHECK_TEMPLATE
++/* Fulqrum: hooks for a page-locked host basis, see host_pinned_basis.cpp.
++ * They are weak, thus they can be absent. */
++extern int fq_primme_host_basis_malloc(void **x, size_t bytes, long long nLocal,
++      int maxBasisSize) __attribute__((weak));
++extern int fq_primme_host_basis_free(void *x) __attribute__((weak));
++#endif
++
+ static int free_fn_dummy (void *p, primme_context ctx) {
+    (void)ctx;
++#ifndef CHECK_TEMPLATE
++   if (fq_primme_host_basis_free && fq_primme_host_basis_free(p) == 0) {
++      return 0;
++   }
++#endif
+    free(p);
+    return 0;
+ }
+@@ -103,8 +116,20 @@ int Num_malloc_Sprimme(PRIMME_INT n, SCALAR **x, primme_context ctx) {
+ 
+    /* Allocate memory */
+ 
++#if defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   /* Fulqrum: a basis array can be page-locked for direct copies to the GPU.
++    * If the hook does not allocate, malloc does. */
++   if (fq_primme_host_basis_malloc && ctx.primme &&
++         fq_primme_host_basis_malloc((void **)x, sizeof(SCALAR) * n,
++               (long long)ctx.primme->nLocal, ctx.primme->maxBasisSize) == 0) {
++      goto fq_allocated;
++   }
++#endif
+    *x = (SCALAR *)malloc(sizeof(SCALAR) * n);
+    if (*x == NULL) return PRIMME_MALLOC_FAILURE;
++#if defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++fq_allocated:; /* The page-locked allocation above goes to this label. */
++#endif
+ 
+    /* Register the allocation */
+ 
+@@ -136,6 +161,12 @@ int Num_free_Sprimme(SCALAR *x, primme_context ctx) {
+ 
+    /* Free pointer */
+ 
++#if defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   /* Fulqrum: a page-locked basis array is unregistered before it is freed. */
++   if (fq_primme_host_basis_free && fq_primme_host_basis_free(x) == 0) {
++      return 0;
++   }
++#endif
+    free(x);
+ 
+    return 0;

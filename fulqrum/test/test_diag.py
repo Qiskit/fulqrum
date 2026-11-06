@@ -29,8 +29,10 @@ def test_diag_fast_mode():
     S = fq.Subspace([list(dist.keys())])
     Hsub = fq.SubspaceHamiltonian(op, S)
     diag1 = Hsub.diagonal_vector()  # This is fast mode
-    diag2 = Hsub.diagonal_vector(disable_fast_mode=True)  # This is regular mode
-    np.allclose(diag1, diag2, 1e-14)
+    diag2 = fq.SubspaceHamiltonian(op, S).diagonal_vector(
+        disable_fast_mode=True
+    )  # This is regular mode
+    np.testing.assert_allclose(diag1, diag2, atol=1e-12, rtol=1e-12)
 
 
 def test_diag_fast_mode_compatibility_check():

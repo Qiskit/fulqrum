@@ -26,6 +26,7 @@
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include "type2_group_table.hpp"
@@ -48,8 +49,13 @@ void omp_matvec2(const std::vector<OperatorTerm_t>& terms,
                  const unsigned int num_groups,
                  const unsigned int ladder_offset,
                  const T* __restrict in_vec,
-                 T* __restrict out_vec)
+                 T* __restrict out_vec,
+                 const TermMasks* prepared_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     std::size_t kk;
     const auto* bitsets = subspace.get_bitsets();
 
@@ -97,6 +103,7 @@ void omp_matvec2(const std::vector<OperatorTerm_t>& terms,
     }
 
     const Type2RowInputs<T> inputs{terms,
+                                   masks,
                                    subspace,
                                    table,
                                    bitsets,

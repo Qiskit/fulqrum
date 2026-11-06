@@ -1,0 +1,141 @@
+diff --git a/src/eigs/auxiliary_eigs_normal.c b/src/eigs/auxiliary_eigs_normal.c
+index 3f04534..96623e9 100644
+--- a/src/eigs/auxiliary_eigs_normal.c
++++ b/src/eigs/auxiliary_eigs_normal.c
+@@ -39,6 +39,7 @@
+ #endif
+ 
+ #include <string.h> /* memset */
++#include <stdlib.h> /* getenv, atoll */
+ #include "common_eigs.h"
+ #include "numerical.h"
+ #include "template_normal.h"
+@@ -243,6 +244,51 @@ int Num_update_VWXR_Sprimme(SCALAR *V, SCALAR *W, SCALAR *BV, PRIMME_INT mV,
+       H0 = H; ldH0 = ldH;
+    }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && defined(PRIMME_WITH_CUBLAS)
++   /* FQ_PRIMME_GPU_DENSE moves the dense update to the GPU.
++    * If the GPU does not do the update, the host does it. */
++   {
++      static int fq_gpu_dense = -1;
++      if (fq_gpu_dense < 0) {
++         const char *fq_e = getenv("FQ_PRIMME_GPU_DENSE");
++         /* These values stop the offload: unset, "", "0", false, no, off. */
++         fq_gpu_dense =
++               (fq_e && fq_e[0] && fq_e[0] != '0' && strcmp(fq_e, "false") &&
++                     strcmp(fq_e, "no") && strcmp(fq_e, "off"))
++                     ? 1
++                     : 0;
++      }
++      extern int fq_primme_dense_update_f64(const double *, const double *,
++            const double *, long long, int, long long, const double *, int,
++            const double *, double *, int, int, long long, double *, int,
++            int, long long, double *, int, int, long long, double *, int,
++            int, long long, double *, int, int, long long, double *,
++            double *, int, int, double *, int, int, double *, int, int,
++            double *, int, int, long long) __attribute__((weak));
++      if (fq_gpu_dense && fq_primme_dense_update_f64 && BV == NULL && mV >= (1 << 20)) {
++         const char *fq_ts = getenv("FQ_PRIMME_GPU_DENSE_TILE");
++         long long fq_tile = fq_ts ? atoll(fq_ts) : 0;
++         int fq_grc = fq_primme_dense_update_f64((const double *)V,
++               (const double *)W, (const double *)BV, (long long)mV, nV,
++               (long long)ldV, (const double *)h, ldh, (const double *)hVals,
++               (double *)X0, nX0b, nX0e, (long long)ldX0, (double *)X1, nX1b,
++               nX1e, (long long)ldX1, (double *)X2, nX2b, nX2e, (long long)ldX2,
++               (double *)Wo, nWob, nWoe, (long long)ldWo, (double *)R, nRb, nRe,
++               (long long)ldR, (double *)Rnorms, (double *)G0, nG, ldG0,
++               (double *)H0, nH, ldH0, (double *)rnorms, nrb, nre,
++               (double *)xnorms, nxb, nxe, fq_tile);
++         if (fq_grc == 0) {
++            goto fq_dense_reduce;
++         }
++         /* A CUDA or cuBLAS failure (fq_grc < 0) stops the solve; the message
++          * is in fq_primme_gpu_last_error. */
++         CHKERR(fq_grc < 0 ? fq_grc : 0);
++         /* If fq_grc is not 0, the GPU did not do the work.
++          * The host code below then does the work. */
++      }
++   }
++#endif
++
+    if (Rnorms) for (i=nRb; i<nRe; i++) Rnorms[i-nRb] = 0.0;
+    if (rnorms) for (i=nrb; i<nre; i++) rnorms[i-nrb] = 0.0;
+    if (G) CHKERR(Num_zero_matrix_SHprimme(G0, nG, nG, ldG0, ctx));
+@@ -341,6 +387,9 @@ int Num_update_VWXR_Sprimme(SCALAR *V, SCALAR *W, SCALAR *BV, PRIMME_INT mV,
+       }
+    }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && defined(PRIMME_WITH_CUBLAS)
++fq_dense_reduce:; /* The GPU offload goes to this label. */
++#endif
+    /* Reduce and copy back G0 and H0 */
+ 
+    if (ctx.numProcs > 1) {
+diff --git a/src/eigs/ortho.c b/src/eigs/ortho.c
+index 66c0a8c..5abcd83 100644
+--- a/src/eigs/ortho.c
++++ b/src/eigs/ortho.c
+@@ -67,6 +67,8 @@
+ #endif
+ 
+ #include <assert.h>
++#include <stdlib.h> /* getenv, atoll */
++#include <string.h> /* strcmp */
+ #include "numerical.h"
+ #include "common_eigs.h"
+ /* Keep automatically generated headers under this section  */
+@@ -1012,6 +1014,43 @@ STATIC int Num_ortho_kernel(SCALAR *Q, PRIMME_INT M, int nQ, PRIMME_INT ldQ,
+       }
+    }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && defined(PRIMME_WITH_CUBLAS)
++   /* FQ_PRIMME_GPU_ORTHO moves this panel loop to the GPU.
++    * The GPU does the work only if W is equal to X and Bo is not NULL. */
++   /* See fulqrum/gpu/eigensolver/dense_gpu_offload.cpp. */
++   {
++      static int fq_gpu_ortho = -1;
++      if (fq_gpu_ortho < 0) {
++         const char *fq_e = getenv("FQ_PRIMME_GPU_ORTHO");
++         fq_gpu_ortho =
++               (fq_e && fq_e[0] && fq_e[0] != '0' && strcmp(fq_e, "false") &&
++                     strcmp(fq_e, "no") && strcmp(fq_e, "off"))
++                     ? 1
++                     : 0;
++      }
++      /* Only block solves with k more than 1 come here.
++       * If k is 1, Bortho_gen uses the gemv path. */
++      extern int fq_primme_ortho_kernel_f64(const double *, long long, int,
++            long long, double *, int, int, long long, const double *, int,
++            const double *, int, int, double *, int, int, int, long long)
++            __attribute__((weak));
++      if (fq_gpu_ortho && fq_primme_ortho_kernel_f64 && (Yortho == 0 || Yortho == 1) && Bo != NULL && W == X && M >= (1 << 20)) {
++         const char *fq_ts = getenv("FQ_PRIMME_GPU_DENSE_TILE");
++         long long fq_tile = fq_ts ? atoll(fq_ts) : 0;
++         int fq_rc = fq_primme_ortho_kernel_f64((const double *)Q, M, nQ,
++               (long long)ldQ, (double *)V, b1, b2, (long long)ldV,
++               (const double *)A, ldA, (const double *)Y, ldY, Yortho,
++               (double *)Bo, ldBo, (D && Y) ? 1 : 0, 1, fq_tile);
++         if (fq_rc == 0) {
++            goto fq_ortho_reduce;
++         }
++         /* A CUDA or cuBLAS failure (fq_rc < 0) stops the solve; the message
++          * is in fq_primme_gpu_last_error. */
++         CHKERR(fq_rc < 0 ? fq_rc : 0);
++      }
++   }
++#endif
++
+    for (i=0; i < M; i+=m, m=min(m,M-i)) {
+       if (D && Y) {
+          /* X = X - Q*A(0:nQ,:) */
+@@ -1059,6 +1098,9 @@ STATIC int Num_ortho_kernel(SCALAR *Q, PRIMME_INT M, int nQ, PRIMME_INT ldQ,
+ #endif
+    }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && defined(PRIMME_WITH_CUBLAS)
++fq_ortho_reduce:; /* The GPU offload goes to this label. */
++#endif
+    /* B = globalSum(Bo) */
+    if (ctx.numProcs > 1) {
+       CHKERR(globalSum_SHprimme(Bo, (nQ + b2) * nX, ctx));

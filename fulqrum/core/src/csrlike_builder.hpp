@@ -17,10 +17,12 @@
 #include <mutex>
 #include <vector>
 
+#include "checked_size.hpp"
 #include "base.hpp"
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include <boost/dynamic_bitset.hpp>
@@ -36,8 +38,13 @@ void csrlike_builder(const std::vector<OperatorTerm_t>& terms,
                      const std::vector<std::vector<width_t>>& group_offdiag_inds,
                      const std::size_t num_groups,
                      std::vector<std::vector<U>>& cols,
-                     std::vector<std::vector<T>>& data)
+                     std::vector<std::vector<T>>& data,
+                     const TermMasks* prepared_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     std::size_t kk;
 
     const auto* bitsets = subspace.get_bitsets();
@@ -114,7 +121,7 @@ void csrlike_builder(const std::vector<OperatorTerm_t>& terms,
             // Build the bit-vector for every row in the block.
             // Stored contiguously as bn * rsb_w bytes so the
             // group loop can stride over rows cheaply.
-            rsb_buf.assign(bn * rsb_w, 0);
+            rsb_buf.assign(checked_multiply(bn, rsb_w), 0);
             for(std::size_t row_in_block = 0; row_in_block < bn; ++row_in_block)
             {
                 const boost::dynamic_bitset<std::size_t>& row = bitsets[r0 + row_in_block].first;
@@ -160,22 +167,8 @@ void csrlike_builder(const std::vector<OperatorTerm_t>& terms,
                     if(col_ptr == nullptr)
                         continue;
                     const std::size_t col_idx = *col_ptr;
-                    T val = 0;
-                    for(std::size_t idx = group_start; idx < group_stop; idx++)
-                    { // begin loop over terms in this group
-                        const OperatorTerm_t* term = &terms[idx];
-                        if(passes_proj_validation(term, row))
-                        {
-                            accum_element(row,
-                                          col_vec,
-                                          term->indices,
-                                          term->values,
-                                          term->coeff,
-                                          term->real_phase,
-                                          term->indices.size(),
-                                          val);
-                        }
-                    }
+                    T val = term_sum<T>(masks, group_start, group_stop, row.m_bits.data());
+
                     if(std::abs(val) > ATOL)
                     {
                         // Mutex locks to prevent symmetric write contention

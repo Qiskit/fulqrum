@@ -28,10 +28,23 @@ add_executable(fulqrum_tests
     test/test_fermi.cpp
     test/test_jw.cpp
     test/test_diag.cpp
+    test/test_element_evaluator.cpp
+    test/test_pt_eval_paths.cpp
+    test/test_lazy_subspace.cpp
+    test/test_operator_tables.cpp
+    test/test_tensor_product_engine.cpp
+    test/test_tile_connections.cpp
+    test/test_full_strs_coefficients.cpp
+    test/test_full_strs_groups.cpp
+    test/test_full_strs_keys.cpp
+    test/test_gpu_kernel_build_formats.cpp
+    test/test_gpu_kernel_formats.cpp
+    test/test_checked_size.cpp
 )
 target_include_directories(fulqrum_tests PRIVATE third-party/doctest/doctest)
 target_link_libraries(fulqrum_tests
     PRIVATE
+    OpenMP::OpenMP_CXX
 )
 
 include(third-party/doctest/scripts/cmake/doctest.cmake)

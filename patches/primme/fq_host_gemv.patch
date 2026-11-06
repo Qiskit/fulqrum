@@ -1,0 +1,35 @@
+diff --git a/src/linalg/blaslapack.c b/src/linalg/blaslapack.c
+index 4bc7637..62aafec 100644
+--- a/src/linalg/blaslapack.c
++++ b/src/linalg/blaslapack.c
+@@ -725,6 +725,14 @@ int Num_trmm_Sprimme(const char *side, const char *uplo, const char *transa,
+  * Subroutine Num_gemv_Sprimme - y = alpha*A*x + beta*y, with A size m x n
+  ******************************************************************************/
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: a row-parallel kernel for tall and narrow gemv. See
++ * fulqrum/gpu/eigensolver/host_gemv.cpp. It is weak, thus it can be absent. */
++extern int fq_primme_host_gemv_f64(int, long long, long long, double,
++      const double *, long long, const double *, long long, double, double *,
++      long long) __attribute__((weak));
++#endif
++
+ #if (!defined(USE_HALF) && !defined(USE_HALFCOMPLEX)) || defined(BLASLAPACK_WITH_HALF)
+ TEMPLATE_PLEASE
+ int Num_gemv_Sprimme(const char *transa, PRIMME_INT m, PRIMME_INT n,
+@@ -765,6 +773,15 @@ int Num_gemv_Sprimme(const char *transa, PRIMME_INT m, PRIMME_INT n,
+       return 0;
+    }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++   /* Fulqrum: the host path moves a tall and narrow gemv to the
++    * row-parallel kernel. If the kernel does not do the work, BLAS does it. */
++   if (fq_primme_host_gemv_f64 && fq_primme_host_gemv_f64(tA, m, n, alpha, a,
++                                        lda, x, incx, beta, y, incy) == 0) {
++      return 0;
++   }
++#endif
++
+    while(m > 0) {
+       lm = (PRIMME_BLASINT)min(m, PRIMME_BLASINT_MAX-1);
+       XGEMV(transa, &lm, &ln, (const BLASSCALAR *)&alpha, (const BLASSCALAR *)a,

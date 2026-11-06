@@ -22,6 +22,7 @@
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include <boost/dynamic_bitset.hpp>
@@ -37,8 +38,13 @@ void omp_matvec(const std::vector<OperatorTerm_t>& terms,
                 const std::vector<std::vector<width_t>>& group_offdiag_inds,
                 const std::size_t num_groups,
                 const T* __restrict in_vec,
-                T* __restrict out_vec)
+                T* __restrict out_vec,
+                const TermMasks* prepared_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     const auto* bitsets = subspace.get_bitsets();
 
     // Flatten group_offdiag_inds from a vector-of-vectors (scattered heap
@@ -152,22 +158,7 @@ void omp_matvec(const std::vector<OperatorTerm_t>& terms,
                             continue;
                         const std::size_t col_idx = *col_ptr;
 
-                        T temp_val = 0;
-                        for(std::size_t idx = group_start; idx < group_stop; idx++)
-                        {
-                            const OperatorTerm_t* term = &terms[idx];
-                            if(passes_proj_validation(term, row))
-                            {
-                                accum_element(row,
-                                              col_vec,
-                                              term->indices,
-                                              term->values,
-                                              term->coeff,
-                                              term->real_phase,
-                                              term->indices.size(),
-                                              temp_val);
-                            }
-                        } // end loop for this group
+                        T temp_val = term_sum<T>(masks, group_start, group_stop, row.m_bits.data());
 
                         if(std::abs(temp_val) > ATOL)
                         {

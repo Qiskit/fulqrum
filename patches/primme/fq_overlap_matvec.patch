@@ -1,0 +1,121 @@
+diff --git a/src/eigs/main_iter.c b/src/eigs/main_iter.c
+--- a/src/eigs/main_iter.c
++++ b/src/eigs/main_iter.c
+@@ -50,6 +50,18 @@
+ #include "ortho.h"
+ #include "restart.h"
+ #include "solve_projection.h"
++
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: hooks that run the matvec of the raw correction on another engine
++ * while the correction is orthogonalized, see _primme_mpi.pyx. They are weak,
++ * thus they can be absent. */
++extern int fq_primme_matvec_start(double *x, double *y, primme_params *primme)
++      __attribute__((weak));
++extern int fq_primme_matvec_input_done(primme_params *primme)
++      __attribute__((weak));
++extern int fq_primme_matvec_wait(primme_params *primme, int accept)
++      __attribute__((weak));
++#endif
+ #include "update_projection.h"
+ #include "update_W.h"
+ #include "auxiliary_eigs.h"
+@@ -686,6 +698,51 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+                      Num_malloc_SHprimme(ldRlocked * blockSize, &Rlocked, ctx));
+             }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            /* Fulqrum: with one new vector t, start the matvec of t before   */
++            /* the orthogonalization. Then H*x = (H*t - W*c)/rho, with        */
++            /* c = V'*t and rho = sqrt(t'*t - c'*c), gives the new column of  */
++            /* W without a matvec on the critical path.                       */
++            int fq_overlap = 0, fq_accept = 0;
++            HSCALAR *fq_c = NULL;
++            HREAL fq_rho = 0.0;
++            if (fq_primme_matvec_start && fq_primme_matvec_input_done &&
++                  fq_primme_matvec_wait && blockSize == 1 && basisSize > 0 &&
++                  BV == NULL && Rlocked == NULL &&
++                  primme->numOrthoConst + numLocked == 0) {
++               double fq_t0 = primme_wTimer();
++               int fq_started = fq_primme_matvec_start(
++                     &V[ldV * basisSize], &W[ldW * basisSize], primme);
++               primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++               CHKERRM(fq_started < 0, PRIMME_USER_FAILURE,
++                     "Error returned by 'fq_primme_matvec_start' %d", fq_started);
++               if (fq_started == 0) {
++                  fq_overlap = 1;
++                  fq_t0 = primme_wTimer();
++                  int fq_err = Num_malloc_SHprimme(basisSize + 1, &fq_c, ctx);
++                  if (fq_err == 0) {
++                     fq_err = Num_gemv_ddh_Sprimme("C", primme->nLocal,
++                           basisSize + 1, 1.0, V, ldV, &V[ldV * basisSize], 1,
++                           0.0, fq_c, 1, ctx);
++                  }
++                  if (fq_err == 0) {
++                     fq_err = globalSum_SHprimme(fq_c, basisSize + 1, ctx);
++                  }
++                  primme->stats.timeOrtho += primme_wTimer() - fq_t0;
++                  fq_t0 = primme_wTimer();
++                  int fq_in = fq_primme_matvec_input_done(primme);
++                  primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++                  if (fq_err != 0 || fq_in != 0) {
++                     fq_primme_matvec_wait(primme, 0);
++                  }
++                  CHKERR(fq_err);
++                  CHKERRM(fq_in != 0, PRIMME_USER_FAILURE,
++                        "Error returned by 'fq_primme_matvec_input_done' %d",
++                        fq_in);
++               }
++            }
++#endif
++
+             /* Orthogonalize the corrections with respect to each other and   */
+             /* the current basis. If basis hasn't expanded with any new       */
+             /* vector, try a random vector                                    */
+@@ -706,6 +763,36 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+                blockSize = 1;
+             }
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            /* Fulqrum: keep the product of t when x came from t alone and    */
++            /* the cancellation |t|/rho is at most 10, else discard it.       */
++            if (fq_overlap) {
++               if (i == 0 && blockSize == 1) {
++                  HREAL fq_tt = REAL_PART(fq_c[basisSize]);
++                  HREAL fq_cc = REAL_PART(
++                        Num_dot_SHprimme(basisSize, fq_c, 1, fq_c, 1, ctx));
++                  if (fq_tt > 0.0 && fq_cc <= 0.99 * fq_tt) {
++                     fq_rho = sqrt(fq_tt - fq_cc);
++                     fq_accept = 1;
++                  }
++               }
++               double fq_t0 = primme_wTimer();
++               int fq_err = fq_primme_matvec_wait(primme, fq_accept);
++               primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++               CHKERRM(fq_err != 0, PRIMME_USER_FAILURE,
++                     "Error returned by 'fq_primme_matvec_wait' %d", fq_err);
++               if (fq_accept) {
++                  fq_t0 = primme_wTimer();
++                  CHKERR(Num_gemv_Sprimme("N", primme->nLocal, basisSize,
++                        -1.0 / fq_rho, W, ldW, fq_c, 1, 1.0 / fq_rho,
++                        &W[ldW * basisSize], 1, ctx));
++                  primme->stats.timeMatvec += primme_wTimer() - fq_t0;
++                  primme->stats.numMatvecs += 1;
++               }
++               CHKERR(Num_free_SHprimme(fq_c, ctx));
++            }
++#endif
++
+             /* The method failing in expanding the search subspace may be an  */
+             /* indication that a) the orthogonalization error is to large for */
+             /* distinguishing the new components on the computed correction,  */
+@@ -798,6 +885,9 @@ int main_iter_Sprimme(HEVAL *evals, SCALAR *evecs, PRIMME_INT ldevecs,
+ 
+             /* Compute W = A*V for the orthogonalized corrections */
+ 
++#if defined(USE_HOST) && defined(USE_DOUBLE) && !defined(CHECK_TEMPLATE)
++            if (!fq_accept)
++#endif
+             CHKERR(matrixMatvec_Sprimme(V, primme->nLocal, ldV, W, ldW,
+                      basisSize, blockSize, ctx));
+ 

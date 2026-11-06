@@ -1,5 +1,2 @@
-numpy>=2.0
-orjson
-psutil
-scipy>=1.14.1
-pyscf
+# Install the core package and its dependencies from pyproject.toml.
+.

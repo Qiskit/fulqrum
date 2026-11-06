@@ -38,8 +38,18 @@ double open_ramps(const QubitOperator& oper,
                   const unsigned int ladder_offset,
                   const double target_energy,
                   const unsigned int max_recursion,
-                  const double tol)
+                  const double tol,
+                  const TermMasks* prepared_masks = nullptr,
+                  const TermMasks* prepared_diag_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(oper.terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+    const TermMasks owned_diag_masks =
+        prepared_diag_masks ? TermMasks{}
+                            : build_term_masks(diag_oper.terms, words_for_width(width));
+    const TermMasks& diag_masks = prepared_diag_masks ? *prepared_diag_masks : owned_diag_masks;
+
     std::size_t recur, kk, current;
     // do stuff if the diagonal can be evaluated quickly
     bool do_fast_diag = fast_diag_compatible(diag_oper);
@@ -74,11 +84,9 @@ double open_ramps(const QubitOperator& oper,
     double col_energy = 0;
     double energy_amp = 0;
 
-    const OperatorTerm_t* term;
     boost::dynamic_bitset<std::size_t> col_vec;
     const std::vector<width_t>* group_inds;
     std::size_t* out_col_ptr;
-    std::size_t idx;
     std::size_t group;
     std::size_t group_int_start, group_int_stop;
     std::size_t num_inserted_bitsets = 1;
@@ -102,17 +110,15 @@ double open_ramps(const QubitOperator& oper,
         std::vector<std::vector<Candidate>> pending_candidates(current_rows.size());
 // Loop over all rows in the current set
 #pragma omp parallel for private(col_vec,                                                          \
-                                 group_inds,                                                       \
-                                 out_col_ptr,                                                      \
-                                 idx,                                                              \
-                                 group,                                                            \
-                                 group_int_start,                                                  \
-                                 group_int_stop,                                                   \
-                                 val,                                                              \
-                                 row_int,                                                          \
-                                 col_energy,                                                       \
-                                 energy_amp,                                                       \
-                                 term) schedule(dynamic)
+                                     group_inds,                                                   \
+                                     out_col_ptr,                                                  \
+                                     group,                                                        \
+                                     group_int_start,                                              \
+                                     group_int_stop,                                               \
+                                     val,                                                          \
+                                     row_int,                                                      \
+                                     col_energy,                                                   \
+                                     energy_amp) schedule(dynamic)
         for(kk = 0; kk < current_rows.size(); kk++)
         {
             const boost::dynamic_bitset<size_t>& row = current_rows.at(kk);
@@ -128,7 +134,7 @@ double open_ramps(const QubitOperator& oper,
             std::vector<width_t> row_occ;
             if(do_fast_diag)
             {
-                single_bitstring_diagonal_fast(row, diag_oper.terms, row_ptrs, e_row);
+                single_bitstring_diagonal_fast(row, diag_masks, row_ptrs, e_row);
                 row_occ = set_bit_indices(row);
             }
 
@@ -188,23 +194,8 @@ double open_ramps(const QubitOperator& oper,
 
                 col_vec = row;
                 flip_bits(col_vec, group_inds->data(), group_inds->size());
-                val = 0;
-                // begin loop over terms in this group
-                for(idx = group_int_start; idx < group_int_stop; idx++)
-                {
-                    term = &oper.terms[idx];
-                    if(passes_proj_validation(term, row))
-                    {
-                        accum_element(row,
-                                      col_vec,
-                                      term->indices,
-                                      term->values,
-                                      term->coeff,
-                                      term->real_phase,
-                                      term->indices.size(),
-                                      val);
-                    }
-                } // end loop over terms in this group
+                val = term_sum<std::complex<double>>(
+                    masks, group_int_start, group_int_stop, row.m_bits.data());
 
                 // We need to compute the column's diagonal energy. In the delta-fast mode
                 // this is an incremental update from the row's diagonal energy across
@@ -215,7 +206,7 @@ double open_ramps(const QubitOperator& oper,
                     col_energy = single_bitstring_diagonal_delta_fast(row,
                                                                       col_vec,
                                                                       row_occ,
-                                                                      diag_oper.terms,
+                                                                      diag_masks,
                                                                       row_ptrs,
                                                                       group_inds->data(),
                                                                       group_inds->size(),
@@ -223,7 +214,7 @@ double open_ramps(const QubitOperator& oper,
                 }
                 else
                 {
-                    single_bitstring_diagonal(col_vec, diag_oper.terms, col_energy);
+                    single_bitstring_diagonal(col_vec, diag_masks, col_energy);
                 }
                 energy_amp = current_prefactors.at(kk) * std::pow(std::abs(val), 2) /
                              (target_energy - col_energy + 1e-15);

@@ -10,6 +10,8 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 from libcpp.vector cimport vector
+from ..core.element_evaluator cimport TermMasks
+from .constants cimport width_t
 from ..core.bitset cimport bitset_t
 from ..core.bitset_hashmap cimport BitsetHashMapWrapper
 include "base_header.pxi"
@@ -21,12 +23,12 @@ cdef extern from "../src/csrlike_builder.hpp":
     void csrlike_builder[T, U](const vector[OperatorTerm_t]& terms,
                               const BitsetHashMapWrapper& subspace,
                               const T * diag_vec,
-                              size_t width,
+                              width_t width,
                               size_t subspace_dim,
                               int has_nonzero_diag,
                               const size_t * group_ptrs,
-                              const vector[vector[unsigned int]]& group_offdiag_inds,
+                              const vector[vector[width_t]]& group_offdiag_inds,
                               size_t num_groups,
                               vector[vector[U]]& cols,
                               vector[vector[T]]& data,
-                              ) nogil
+                              const TermMasks* prepared_masks) except + nogil

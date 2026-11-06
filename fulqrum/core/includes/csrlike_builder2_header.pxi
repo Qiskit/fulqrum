@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 from libcpp.vector cimport vector
+from ..core.element_evaluator cimport TermMasks
 from ..core.bitset cimport bitset_t
 from ..core.bitset_hashmap cimport BitsetHashMapWrapper
 from .constants cimport width_t
@@ -33,4 +34,4 @@ cdef extern from "../src/csrlike_builder2.hpp":
                               unsigned int ladder_offset,
                               vector[vector[U]]& cols,
                               vector[vector[T]]& data,
-                              ) nogil
+                              const TermMasks* prepared_masks) except + nogil

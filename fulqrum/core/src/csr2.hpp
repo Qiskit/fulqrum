@@ -19,12 +19,14 @@
 #include <cstdlib>
 #include <vector>
 
+#include "checked_size.hpp"
 #include "external/hash_set8.hpp"
 
 #include "base.hpp"
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include "type2_group_table.hpp"
@@ -58,10 +60,17 @@ void csr_matrix_builder2(const std::vector<OperatorTerm_t>& terms,
                          T* __restrict indptr,
                          T* __restrict indices,
                          U* __restrict data,
-                         const int compute_values)
+                         const int compute_values,
+                         const TermMasks* prepared_masks = nullptr)
 {
+    if(subspace_dim) checked_index<T>(subspace_dim - 1);
+    checked_add(subspace_dim, 1);
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     std::size_t kk;
-    T temp, _sum;
+    std::size_t temp, _sum;
 
     const auto* bitsets = subspace.get_bitsets();
 
@@ -110,6 +119,7 @@ void csr_matrix_builder2(const std::vector<OperatorTerm_t>& terms,
     }
 
     const Type2RowInputs<U> inputs{terms,
+                                   masks,
                                    subspace,
                                    table,
                                    bitsets,
@@ -134,13 +144,13 @@ void csr_matrix_builder2(const std::vector<OperatorTerm_t>& terms,
     }
 
     // process diagonal
-    std::vector<T> row_nnz_s(subspace_dim, 0);
+    std::vector<std::size_t> row_nnz_s(subspace_dim, 0);
     if(has_nonzero_diag)
     {
 #pragma omp parallel for schedule(dynamic) if(subspace_dim > 4096)
         for(kk = 0; kk < subspace_dim; kk++)
         { // begin loop over all rows
-            T& row_nnz = row_nnz_s[kk]; // reference T& is critical
+            std::size_t& row_nnz = row_nnz_s[kk]; // reference T& is critical
             T& elem_start = indptr[kk];
             // do diagonal first, if any
             if(diag_vec[kk] != 0.0)
@@ -178,7 +188,7 @@ void csr_matrix_builder2(const std::vector<OperatorTerm_t>& terms,
             // Stores a single (row r0+row_in_block, col_idx, v) entry.
             // row_nnz_s[r0+row_in_block] and indptr[r0+row_in_block] give the CSR write position.
             auto store_element = [&](std::size_t row_in_block, std::size_t cidx, const U& v) {
-                T& row_nnz = row_nnz_s[r0 + row_in_block];
+                std::size_t& row_nnz = row_nnz_s[r0 + row_in_block];
                 if(compute_values)
                 {
                     const T elem_start = indptr[r0 + row_in_block];
@@ -268,10 +278,10 @@ void csr_matrix_builder2(const std::vector<OperatorTerm_t>& terms,
         _sum = 0;
         for(kk = 0; kk < (subspace_dim); kk++)
         {
-            temp = _sum + row_nnz_s[kk];
-            indptr[kk] = _sum;
+            temp = checked_add(_sum, static_cast<std::size_t>(row_nnz_s[kk]));
+            indptr[kk] = checked_index<T>(_sum);
             _sum = temp;
         }
-        indptr[subspace_dim] = _sum;
+        indptr[subspace_dim] = checked_index<T>(_sum);
     }
 }

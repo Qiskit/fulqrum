@@ -45,6 +45,8 @@ def ramps_restricted_simple(object Hsub, Subspace target_subspace, double target
         raise FulqrumError("Input Hamiltonian must be a SubspaceHamiltonian object")
     cdef Subspace out = target_subspace.copy()
     cdef FulqrumSpMV spmv = Hsub.spmv
+    out.subspace.prepare_mutation()
+    restricted_subspace.subspace.ensure_hashmap()
     cdef double energy = simple_restricted(spmv.oper,
                                            restricted_subspace.subspace.bitstrings,
                                            out.subspace.bitstrings,
@@ -60,8 +62,12 @@ def ramps_restricted_simple(object Hsub, Subspace target_subspace, double target
                                            spmv.ladder_offset,
                                            target_energy,
                                            max_recursion,
-                                           tol)
+                                    tol,
+                                    &spmv.term_masks,
+                                    &spmv.diag_masks)
 
+
+    out.subspace.size = out.subspace.bitstrings.size()
 
     # This is a temp workaround for issues with iteratively expanded
     # subspaces.  This should be removed once those are resolved

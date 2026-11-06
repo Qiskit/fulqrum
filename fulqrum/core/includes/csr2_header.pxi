@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 from libcpp.vector cimport vector
+from ..core.element_evaluator cimport TermMasks
 from ..core.bitset cimport bitset_t
 from ..core.bitset_hashmap cimport BitsetHashMapWrapper
 from .constants cimport width_t
@@ -33,4 +34,5 @@ cdef extern from "../src/csr2.hpp":
                               T * indptr,
                               T * indices,
                               U * data,
-                              int compute_values) nogil
+                              int compute_values,
+                              const TermMasks* prepared_masks) except + nogil

@@ -1,0 +1,52 @@
+diff --git a/src/linalg/cublas_wrapper.c b/src/linalg/cublas_wrapper.c
+index 153fe76..f0d47a3 100644
+--- a/src/linalg/cublas_wrapper.c
++++ b/src/linalg/cublas_wrapper.c
+@@ -253,6 +253,14 @@ int Num_check_pointer_Sprimme(void *x) {
+    return 0;
+ }
+ 
++#if defined(PRIMME_WITH_CUBLAS) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: hooks for a managed-memory basis, see managed_basis.cpp.
++ * They are weak, thus they can be absent. */
++extern int fq_primme_gpu_basis_malloc(void **x, size_t bytes, long long nLocal,
++      int maxBasisSize) __attribute__((weak));
++extern void fq_primme_gpu_basis_free(void *x) __attribute__((weak));
++#endif
++
+ /******************************************************************************
+  * Function Num_malloc - Allocate a vector of scalars
+  *
+@@ -275,7 +283,19 @@ int Num_malloc_Sprimme(PRIMME_INT n, SCALAR **x, primme_context ctx) {
+ 
+    /* Allocate memory */
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: a basis array can use managed memory that is part in HBM and
++    * part in host memory. If the hook does not allocate, cudaMalloc does. */
++   if (fq_primme_gpu_basis_malloc && ctx.primme &&
++         fq_primme_gpu_basis_malloc((void **)x, n * sizeof(SCALAR),
++               ctx.primme->nLocal, ctx.primme->maxBasisSize) == 0) {
++      goto fq_allocated;
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Malloc)((void**)x, n * sizeof(SCALAR)));
++#ifdef PRIMME_WITH_CUBLAS
++fq_allocated:; /* The managed allocation above goes to this label. */
++#endif
+ 
+    /* Register the allocation */
+ 
+@@ -307,6 +327,12 @@ int Num_free_Sprimme(SCALAR *x, primme_context ctx) {
+ 
+    /* Free pointer */
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: give back the HBM budget of a managed basis array. */
++   if (fq_primme_gpu_basis_free) {
++      fq_primme_gpu_basis_free(x);
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Free(x)));
+ 
+    return 0;

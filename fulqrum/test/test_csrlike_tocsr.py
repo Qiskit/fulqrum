@@ -12,6 +12,9 @@
 # pylint: disable=no-name-in-module
 import numpy as np
 import scipy.sparse as sp
+import pytest
+import psutil
+from types import SimpleNamespace
 import fulqrum as fq
 from fulqrum.utils import qubitoperator_to_matrix
 
@@ -349,3 +352,21 @@ def test_csrlike_csr6a():
     assert np.allclose(P.indices, M.indices)
     assert np.allclose(P.data, M.data)
     assert P.indptr.dtype == np.int32
+
+
+@pytest.mark.parametrize("route", ["spmv", "csrlike"])
+@pytest.mark.parametrize("label", ["X", "Y"])
+def test_csr_memory_preflight_and_recovery(monkeypatch, route, label):
+    from fulqrum.exceptions import FulqrumError
+
+    operator = fq.QubitOperator.from_label(label, 1.0)
+    hsub = fq.SubspaceHamiltonian(operator, fq.Subspace([["0", "1"]]))
+    builder = hsub.spmv if route == "spmv" else hsub.spmv.to_csrlike()
+    available_memory = psutil.virtual_memory
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(available=0))
+    with pytest.raises(FulqrumError, match="does not fit within available memory"):
+        builder.to_csr_array()
+    monkeypatch.setattr(psutil, "virtual_memory", available_memory)
+    assert np.allclose(
+        builder.to_csr_array().toarray(), qubitoperator_to_matrix(operator)
+    )

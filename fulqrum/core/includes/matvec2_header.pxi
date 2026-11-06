@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 from libcpp.vector cimport vector
+from ..core.element_evaluator cimport TermMasks
 from ..core.bitset cimport bitset_t
 from ..core.bitset_hashmap cimport BitsetHashMapWrapper
 from .constants cimport width_t
@@ -29,4 +30,5 @@ cdef extern from "../src/matvec2.hpp":
                 unsigned int num_groups,
                 unsigned int ladder_offset,
                 const T * in_vec,
-                T * out_vec) nogil
+                T * out_vec,
+                const TermMasks* prepared_masks) except + nogil

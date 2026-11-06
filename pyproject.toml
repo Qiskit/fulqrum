@@ -1,6 +1,43 @@
 [build-system]
-requires = ["numpy", "cython>=3.0.5", "setuptools"]
+requires = ["numpy>=2.0", "cython>=3.0.5", "setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "fulqrum"
+dynamic = ["version"]
+description = "A generalized framework for quantum subspace diagonalization"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
+classifiers = ["Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13", "Programming Language :: Python :: 3.14", "Programming Language :: Python :: 3.15"]
+dependencies = ["numpy>=2.0", "scipy>=1.14.1", "orjson", "pyscf", "psutil"]
+
+[project.optional-dependencies]
+chemistry = ["pyscf"]
+qiskit = ["qiskit>=1.2", "qiskit-nature>=0.7.2"]
+openfermion = ["openfermion"]
+primme = ["primme>=3.2.3"]
+gpu = ["cupy-cuda13x>=14,<15"]
+test = ["pytest", "pytest-benchmark", "primme>=3.2.3", "pyscf", "qiskit>=1.2", "qiskit-nature>=0.7.2", "openfermion"]
+docs = ["Sphinx", "jupyter", "jupyter-sphinx", "nbsphinx", "matplotlib", "pydata_sphinx_theme", "qiskit-sphinx-theme", "pylatexenc", "pyscf", "qiskit>=1.2", "qiskit-nature>=0.7.2", "openfermion", "primme>=3.2.3"]
+lint = ["ruff<0.16", "pycodestyle", "pylint"]
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "fulqrum.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["fulqrum", "fulqrum.*"]
+
+[tool.setuptools.package-data]
+"fulqrum.core" = ["*.pxd"]
+"fulqrum.core.src" = ["*.hpp"]
+"fulqrum.core.src.tensor_product" = ["*.hpp"]
+"fulqrum.include" = ["*.hpp"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.

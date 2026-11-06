@@ -1,0 +1,300 @@
+diff --git a/src/include/common.h b/src/include/common.h
+index b9335b1..cbe9a64 100644
+--- a/src/include/common.h
++++ b/src/include/common.h
+@@ -660,7 +660,12 @@ typedef struct primme_context_str {
+ #endif
+ 
+ /* Number of rows processed as once for streaming operation */
++/* Fulqrum: the GPU path uses tiles of 2^24 rows. A full-length tile uses
++ * too much memory and makes cudaMemset2D fail at large nLocal. */
++#define PRIMME_BLOCK_SIZE IMPL(512, 16777216)
++#ifndef PRIMME_BLOCK_SIZE
+ #define PRIMME_BLOCK_SIZE IMPL(512, INT_MAX)
++#endif
+ 
+ #ifdef __cplusplus
+ #define EXTERN_C extern "C"
+diff --git a/src/linalg/cublas_wrapper.c b/src/linalg/cublas_wrapper.c
+index af1e1e8..153fe76 100644
+--- a/src/linalg/cublas_wrapper.c
++++ b/src/linalg/cublas_wrapper.c
+@@ -113,6 +113,86 @@ static GPUBLAS_SYMBOL(Operation_t) toCublasOperation(const char trans) {
+             "Error in " GPU_SELECT("CUDA", "HIP") " function: %d", (int)ret_); \
+    }
+ 
++#if defined(PRIMME_WITH_CUBLAS) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: use the cuBLAS 64-bit API. The 32-bit API can fail when a
++ * leading dimension is 2^30 or more. */
++#if defined(CUBLAS_VER_MAJOR) && CUBLAS_VER_MAJOR >= 12
++#undef cublasSgemv
++#undef cublasDgemv
++#undef cublasCgemv
++#undef cublasZgemv
++#undef cublasStrsm
++#undef cublasDtrsm
++#undef cublasCtrsm
++#undef cublasZtrsm
++#define cublasSgemv cublasSgemv_v2_64
++#define cublasDgemv cublasDgemv_v2_64
++#define cublasCgemv cublasCgemv_v2_64
++#define cublasZgemv cublasZgemv_v2_64
++#define cublasStrsm cublasStrsm_v2_64
++#define cublasDtrsm cublasDtrsm_v2_64
++#define cublasCtrsm cublasCtrsm_v2_64
++#define cublasZtrsm cublasZtrsm_v2_64
++#define cublasGemmEx cublasGemmEx_64
++#define cublasGemmStridedBatchedEx cublasGemmStridedBatchedEx_64
++#define cublasAxpyEx cublasAxpyEx_64
++#define cublasDotcEx cublasDotcEx_64
++#define cublasScalEx cublasScalEx_64
++#endif
++
++/* Fulqrum: copy n columns of w bytes with one cudaMemcpy or column by
++ * column. It returns 0 if the caller must use cudaMemcpy2D. */
++static int fq_memcpy_cols(cudaError_t *err, void *y, size_t ldy, const void *x,
++      size_t ldx, size_t w, size_t n, enum cudaMemcpyKind kind) {
++   const char *xb = (const char *)x;
++   char *yb = (char *)y;
++   size_t j;
++   int overlap = xb < yb + (ldy * (n - 1) + w) && yb < xb + (ldx * (n - 1) + w);
++   if (w == ldx && w == ldy && !overlap) {
++      *err = cudaMemcpy(y, x, w * n, kind);
++      return 1;
++   }
++   if (ldx <= (size_t)INT_MAX && ldy <= (size_t)INT_MAX) {
++      return 0;
++   }
++   /* Columns can overlap only if ldx is equal to ldy. Copy in a safe order. */
++   if (overlap && (ldx != ldy || (size_t)(xb < yb ? yb - xb : xb - yb) < w)) {
++      return 0;
++   }
++   *err = cudaSuccess;
++   for (j = 0; j < n && *err == cudaSuccess; j++) {
++      size_t c = yb > xb ? n - 1 - j : j;
++      *err = cudaMemcpy(yb + ldy * c, xb + ldx * c, w, kind);
++   }
++   return 1;
++}
++
++/* Fulqrum: set n columns of w bytes to zero with one cudaMemset or column
++ * by column. It returns 0 if the caller must use cudaMemset2D. */
++static int fq_memset_cols(
++      cudaError_t *err, void *x, size_t ldx, size_t w, size_t n) {
++   size_t j;
++   if (w == ldx) {
++      *err = cudaMemset(x, 0, w * n);
++      return 1;
++   }
++   if (ldx <= (size_t)INT_MAX) {
++      return 0;
++   }
++   *err = cudaSuccess;
++   for (j = 0; j < n && *err == cudaSuccess; j++) {
++      *err = cudaMemset((char *)x + ldx * j, 0, w);
++   }
++   return 1;
++}
++#endif
++
++#if defined(PRIMME_WITH_CUBLAS) && !defined(CHECK_TEMPLATE)
++/* Fulqrum: cuBLAS gemv failed (status 13) with 1.1e9 rows, also with the
++ * 64-bit API. Do vector operations in chunks of this number of rows. */
++#define FQ_CUBLAS_MAX_ROWS ((PRIMME_INT)1 << 29)
++#endif
++
+ #endif /* CUBLAS_WRAPPER_PRIVATE */
+ 
+ STATIC void toCudaDataType(primme_op_datatype xt, void *r) {
+@@ -344,8 +424,20 @@ int Num_set_matrix_Sprimme(HSCALAR *x, PRIMME_INT m, PRIMME_INT n,
+    CHKERR(Num_matrix_astype_SHprimme(x, m, n, ldx, PRIMME_OP_HSCALAR,
+          (void **)&x0, &ldx0, PRIMME_OP_SCALAR, 1 /* alloc */, 1 /* copy */,
+          ctx));
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do not use cudaMemcpy2D if the pitch is too large for it. */
++   cudaError_t fq_e = cudaSuccess;
++   if (fq_memcpy_cols(&fq_e, y, sizeof(SCALAR) * ldy, x0, sizeof(SCALAR) * ldx0,
++             sizeof(SCALAR) * m, n, cudaMemcpyHostToDevice)) {
++      CHKERRCUDA(fq_e);
++      goto fq_set_copied;
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Memcpy2D)(y, sizeof(SCALAR) * ldy, x0, sizeof(SCALAR) * ldx0,
+          sizeof(SCALAR) * m, n, GPU_SYMBOL(MemcpyHostToDevice)));
++#ifdef PRIMME_WITH_CUBLAS
++fq_set_copied:; /* The copy above goes to this label. */
++#endif
+    CHKERRCUDA(GPU_SYMBOL(DeviceSynchronize)());
+    if ((XSCALAR *)x != x0) CHKERR(Num_free_SXprimme(x0, ctx));
+ 
+@@ -379,8 +471,20 @@ int Num_get_matrix_Sprimme(SCALAR *x, PRIMME_INT m, PRIMME_INT n,
+    CHKERR(Num_matrix_astype_SHprimme(y, m, n, ldy, PRIMME_OP_HSCALAR,
+          (void **)&y0, &ldy0, PRIMME_OP_SCALAR, 1 /* alloc */,
+          0 /* don't copy */, ctx));
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do not use cudaMemcpy2D if the pitch is too large for it. */
++   cudaError_t fq_e = cudaSuccess;
++   if (fq_memcpy_cols(&fq_e, y0, sizeof(SCALAR) * ldy0, x, sizeof(SCALAR) * ldx,
++             sizeof(SCALAR) * m, n, cudaMemcpyDeviceToHost)) {
++      CHKERRCUDA(fq_e);
++      goto fq_get_copied;
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Memcpy2D)(y0, sizeof(SCALAR) * ldy0, x, sizeof(SCALAR) * ldx,
+          sizeof(SCALAR) * m, n, GPU_SYMBOL(MemcpyDeviceToHost)));
++#ifdef PRIMME_WITH_CUBLAS
++fq_get_copied:; /* The copy above goes to this label. */
++#endif
+    CHKERRCUDA(GPU_SYMBOL(DeviceSynchronize)());
+    CHKERR(Num_matrix_astype_SHprimme(y0, m, n, ldy0, PRIMME_OP_SCALAR,
+          (void **)&y, &ldy, PRIMME_OP_HSCALAR, -1 /* destroy */, 1 /* copy */,
+@@ -525,6 +629,59 @@ int Num_gemv_Sprimme(const char *transa, PRIMME_INT m, int n, HSCALAR alpha,
+       return 0;
+    }
+ 
++#if defined(PRIMME_WITH_CUBLAS) && !defined(USE_COMPLEX)
++   /* Fulqrum: cuBLAS gemv fails if lda is 2^30 or more (status 13 at nLocal
++    * 1.1e9, also with the 64-bit API). Use dot and axpy column by column. */
++   if (lda >= ((PRIMME_INT)1 << 30) && incx == 1 && incy == 1 && n <= 64) {
++      HSCALAR fq_v[64];
++      int j;
++      if (tA) {
++         /* y(j) = alpha*A(:,j)'*x + beta*y(j) */
++         if (ABS(beta) != 0.0) {
++            CHKERR(Num_get_matrix_Sprimme(y, n, 1, n, fq_v, n, ctx));
++         }
++         for (j = 0; j < n; j++) {
++            HSCALAR d =
++                  Num_dot_Sprimme(m, a + (PRIMME_INT)lda * j, 1, x, 1, ctx);
++            fq_v[j] = alpha * d + (ABS(beta) != 0.0 ? beta * fq_v[j] : 0.0);
++         }
++         CHKERR(Num_set_matrix_Sprimme(fq_v, n, 1, n, y, n, ctx));
++      } else {
++         /* y = beta*y + sum_j (alpha*x(j))*A(:,j) */
++         CHKERR(Num_get_matrix_Sprimme(x, n, 1, n, fq_v, n, ctx));
++         if (ABS(beta) == 0.0) {
++            CHKERR(Num_zero_matrix_Sprimme(y, m, 1, m, ctx));
++         } else if (beta != (HSCALAR)1.0) {
++            CHKERR(Num_scal_Sprimme(m, beta, y, 1, ctx));
++         }
++         for (j = 0; j < n; j++) {
++            CHKERR(Num_axpy_Sprimme(
++                  m, alpha * fq_v[j], a + (PRIMME_INT)lda * j, 1, y, 1, ctx));
++         }
++      }
++      return 0;
++   }
++#endif
++
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do the rows in chunks. For op(A)=A' the chunks add into y. */
++   if (m > FQ_CUBLAS_MAX_ROWS) {
++      PRIMME_INT i0;
++      for (i0 = 0; i0 < m; i0 += FQ_CUBLAS_MAX_ROWS) {
++         PRIMME_INT mc = min(FQ_CUBLAS_MAX_ROWS, m - i0);
++         if (tA) {
++            CHKERR(Num_gemv_Sprimme(transa, mc, n, alpha, a + i0, lda,
++                  x + i0 * incx, incx, i0 == 0 ? beta : (HSCALAR)1.0, y, incy,
++                  ctx));
++         } else {
++            CHKERR(Num_gemv_Sprimme(transa, mc, n, alpha, a + i0, lda, x, incx,
++                  beta, y + i0 * incy, incy, ctx));
++         }
++      }
++      return 0;
++   }
++#endif
++
+ #if defined(USE_HALFCOMPLEX_CUBLAS)
+    (void)alpha;
+    (void)a;
+@@ -619,6 +776,18 @@ int Num_axpy_Sprimme(PRIMME_INT n, HSCALAR alpha, SCALAR *x, int incx,
+    /* Zero dimension matrix may cause problems */
+    if (n == 0) return 0;
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do the entries in chunks. */
++   if (n > FQ_CUBLAS_MAX_ROWS) {
++      PRIMME_INT i0;
++      for (i0 = 0; i0 < n; i0 += FQ_CUBLAS_MAX_ROWS) {
++         CHKERR(Num_axpy_Sprimme(min(FQ_CUBLAS_MAX_ROWS, n - i0), alpha,
++               x + i0 * incx, incx, y + i0 * incy, incy, ctx));
++      }
++      return 0;
++   }
++#endif
++
+ #if defined(USE_HALFCOMPLEX_CUBLAS)
+    (void)alpha;
+    (void)x;
+@@ -650,6 +819,19 @@ HSCALAR Num_dot_Sprimme(PRIMME_INT n, SCALAR *x, int incx, SCALAR *y, int incy,
+    /* Zero dimension matrix may cause problems */
+    if (n == 0) return 0;
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do the entries in chunks and add the partial results. */
++   if (n > FQ_CUBLAS_MAX_ROWS) {
++      HSCALAR fq_sum = 0.0;
++      PRIMME_INT i0;
++      for (i0 = 0; i0 < n; i0 += FQ_CUBLAS_MAX_ROWS) {
++         fq_sum += Num_dot_Sprimme(min(FQ_CUBLAS_MAX_ROWS, n - i0),
++               x + i0 * incx, incx, y + i0 * incy, incy, ctx);
++      }
++      return fq_sum;
++   }
++#endif
++
+ #if defined(USE_HALFCOMPLEX_CUBLAS)
+    (void)x;
+    (void)incx;
+@@ -681,6 +863,18 @@ int Num_scal_Sprimme(PRIMME_INT n, HSCALAR alpha, SCALAR *x, int incx,
+    /* Zero dimension matrix may cause problems */
+    if (n == 0) return 0;
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do the entries in chunks. */
++   if (n > FQ_CUBLAS_MAX_ROWS) {
++      PRIMME_INT i0;
++      for (i0 = 0; i0 < n; i0 += FQ_CUBLAS_MAX_ROWS) {
++         CHKERR(Num_scal_Sprimme(min(FQ_CUBLAS_MAX_ROWS, n - i0), alpha,
++               x + i0 * incx, incx, ctx));
++      }
++      return 0;
++   }
++#endif
++
+ #if defined(USE_HALFCOMPLEX_CUBLAS)
+    (void)alpha;
+    (void)x;
+@@ -746,6 +940,15 @@ int Num_copy_matrix_Sprimme(SCALAR *x, PRIMME_INT m, PRIMME_INT n,
+    if ((x == y && ldx == ldy) || m == 0 || n == 0)
+       return 0;
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: do not use cudaMemcpy2D if the pitch is too large for it. */
++   cudaError_t fq_e = cudaSuccess;
++   if (fq_memcpy_cols(&fq_e, y, sizeof(SCALAR) * ldy, x, sizeof(SCALAR) * ldx,
++             sizeof(SCALAR) * m, n, cudaMemcpyDeviceToDevice)) {
++      CHKERRCUDA(fq_e);
++      return 0;
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Memcpy2D)(y, sizeof(SCALAR) * ldy, x, sizeof(SCALAR) * ldx,
+          sizeof(SCALAR) * m, n, GPU_SYMBOL(MemcpyDeviceToDevice)));
+ 
+@@ -771,6 +974,15 @@ int Num_zero_matrix_Sprimme(SCALAR *x, PRIMME_INT m, PRIMME_INT n,
+    /* Zero dimension matrix may cause problems */
+    if (m == 0 || n == 0) return 0;
+ 
++#ifdef PRIMME_WITH_CUBLAS
++   /* Fulqrum: cudaMemset2D fails if the pitch is too large (a restart at
++    * nLocal of 3e8 failed). Use cudaMemset for these cases. */
++   cudaError_t fq_e = cudaSuccess;
++   if (fq_memset_cols(&fq_e, x, sizeof(SCALAR) * ldx, sizeof(SCALAR) * m, n)) {
++      CHKERRCUDA(fq_e);
++      return 0;
++   }
++#endif
+    CHKERRCUDA(GPU_SYMBOL(Memset2D)(x, sizeof(SCALAR) * ldx, 0, sizeof(SCALAR) * m, n));
+ 
+    return 0;

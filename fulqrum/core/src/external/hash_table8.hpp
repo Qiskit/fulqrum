@@ -53,8 +53,10 @@
 #pragma once
 
 #include <cstring>
+#include <algorithm>
 #include <string>
 #include <cstdlib>
+#include <stdexcept>
 #include <type_traits>
 #include <cassert>
 #include <utility>
@@ -405,6 +407,7 @@ public:
         std::swap(_hasher, rhs._hasher);
         std::swap(_pairs, rhs._pairs);
         std::swap(_index, rhs._index);
+        _bucket_occupancy.swap(rhs._bucket_occupancy);
         std::swap(_num_buckets, rhs._num_buckets);
         std::swap(_num_filled, rhs._num_filled);
         std::swap(_mask, rhs._mask);
@@ -1151,12 +1154,17 @@ public:
     {
         (void)force;
 #if EMH_HIGH_LOAD == 0
-        const auto required_buckets = num_elems * _mlf >> 27;
+        uint64_t scaled_size;
+        if (__builtin_mul_overflow(num_elems, (uint64_t)_mlf, &scaled_size))
+            throw std::length_error("Hashmap reserve size overflow");
+        const auto required_buckets = scaled_size >> 27;
         if (EMH_LIKELY(required_buckets < _mask)) // && !force
             return false;
 
 #elif EMH_HIGH_LOAD
         const auto required_buckets = num_elems + num_elems * 1 / 9;
+        if (required_buckets < num_elems)
+            throw std::length_error("Hashmap reserve size overflow");
         if (EMH_LIKELY(required_buckets < _mask))
             return false;
 
@@ -1177,6 +1185,8 @@ public:
 #endif
 
         //assert(required_buckets < max_size());
+        if (required_buckets >= std::min((uint64_t)max_size(), uint64_t(1) << 31) - 2)
+            throw std::length_error("Hashmap reserve exceeds backend bucket capacity");
         rehash(required_buckets + 2);
         _bucket_occupancy.resize(_num_buckets);
         return true;

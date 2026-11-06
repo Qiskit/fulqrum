@@ -17,11 +17,13 @@ include "includes/types.pxi"
 import time
 import numpy as np
 import scipy.sparse as sp
-from ..exceptions import FulqrumError
 import psutil
+from ..exceptions import FulqrumError
 
 from .constants cimport MAX_SIZE_T
 
+
+from .tensor_product_cpu cimport checked_multiply, checked_add, checked_index
 
 cdef class CSRLike():
     def __cinit__(self, size_t num_rows, unsigned int is_real=1):
@@ -31,6 +33,7 @@ cdef class CSRLike():
         self.is_int64 = num_rows > np.iinfo(np.int32).max
         self.data_type = 0
         cdef size_t kk
+        checked_multiply(num_rows, 2 * sizeof(vector[int]))
         if self.is_real:
             if self.is_int64:
                 self.data_d64.cols.resize(self.num_rows)
@@ -99,16 +102,16 @@ cdef class CSRLike():
         cdef size_t kk
         if self.data_type == 1:
             for kk in range(self.num_rows):
-                nnz += self.data_d32.data[kk].size()
+                nnz = checked_add(nnz, self.data_d32.data[kk].size())
         elif self.data_type == 2:
             for kk in range(self.num_rows):
-                nnz += self.data_d64.data[kk].size()
+                nnz = checked_add(nnz, self.data_d64.data[kk].size())
         elif self.data_type == 3:
             for kk in range(self.num_rows):
-                nnz += self.data_z32.data[kk].size()
+                nnz = checked_add(nnz, self.data_z32.data[kk].size())
         elif self.data_type == 4:
             for kk in range(self.num_rows):
-                nnz += self.data_z64.data[kk].size()
+                nnz = checked_add(nnz, self.data_z64.data[kk].size())
         self._nnz = nnz
         return nnz
 
@@ -120,6 +123,7 @@ cdef class CSRLike():
         cdef double[::1] real_data
         cdef complex[::1] complex_data
 
+        checked_index[int64](checked_add(self.num_rows, 1))
         cdef size_t nnz = self.nnz
         cdef object mat
         cdef double stop, start = time.perf_counter()
@@ -129,33 +133,33 @@ cdef class CSRLike():
             stop = time.perf_counter()
             if verbose:
                 print(f'CSR Conversion time: {round(stop-start, 3)}')
-            return  sp.csr_array((np.empty(0, dtype=_dtype), np.empty(0, dtype=_dtype), np.zeros(self.num_rows+1, dtype=_dtype)),
+            return  sp.csr_array((np.empty(0, dtype=_dtype), np.empty(0, dtype=_dtype), np.zeros(checked_add(self.num_rows, 1), dtype=_dtype)),
                                 shape=(self.num_rows,)*2, dtype=float if self.is_real else complex)
 
         cdef int data_size
-        cdef int64 total_bytes
+        cdef size_t total_bytes
         # does output CSR matrix require int64 indices?
         cdef size_t max_int = np.iinfo(np.int32).max
-        cdef int needs_int64 = (self.num_rows+1) > max_int or nnz > max_int
+        cdef int needs_int64 = (checked_add(self.num_rows, 1)) > max_int or nnz > max_int
         if self.is_real:
             data_size = 8 # size of double
         else:
             data_size = 16 # size of double complex
-        # check if matrix will fit into memory
+        # Compute the CSR array sizes
         if needs_int64:
             # indptr + indices + data sizes
-            total_bytes = (self.num_rows+1) * 8  + nnz * 8 + nnz * data_size
+            total_bytes = checked_add(checked_multiply(checked_add(self.num_rows, 1), 8), checked_multiply(nnz, 8 + data_size))
         else:
-            total_bytes = (self.num_rows+1) * 4  + nnz * 4 + nnz * data_size
+            total_bytes = checked_add(checked_multiply(checked_add(self.num_rows, 1), 4), checked_multiply(nnz, 4 + data_size))
 
         if psutil.virtual_memory().available < total_bytes:
             raise FulqrumError(f"Sparse matrix copy of size {round(total_bytes/(1024**2), 3)} Mb does not fit within available memory.")
 
         if '32' in self.type_string and not needs_int64:
-            ptr32 = np.zeros(self.num_rows+1, dtype=np.int32)
+            ptr32 = np.zeros(checked_add(self.num_rows, 1), dtype=np.int32)
             inds32 = np.empty(nnz, dtype=np.int32)
         else:
-            ptr64 = np.zeros(self.num_rows+1, dtype=np.int64)
+            ptr64 = np.zeros(checked_add(self.num_rows, 1), dtype=np.int64)
             inds64 = np.empty(nnz, dtype=np.int64)
 
         if 'd' in self.type_string:

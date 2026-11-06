@@ -27,6 +27,7 @@
 #include "constants.hpp"
 #include "csr_utils.hpp"
 #include "csrlike.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include "type2_group_table.hpp"
@@ -59,8 +60,13 @@ void csrlike_builder2(const std::vector<OperatorTerm_t>& terms,
                       const std::size_t num_groups,
                       const unsigned int ladder_offset,
                       std::vector<std::vector<U>>& cols,
-                      std::vector<std::vector<T>>& data)
+                      std::vector<std::vector<T>>& data,
+                      const TermMasks* prepared_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     std::size_t kk;
     const auto* bitsets = subspace.get_bitsets();
 
@@ -119,6 +125,7 @@ void csrlike_builder2(const std::vector<OperatorTerm_t>& terms,
     }
 
     const Type2RowInputs<T> inputs{terms,
+                                   masks,
                                    subspace,
                                    table,
                                    bitsets,

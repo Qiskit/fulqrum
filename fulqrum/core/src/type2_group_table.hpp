@@ -20,6 +20,7 @@
 #include "base.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include <algorithm>
@@ -640,6 +641,7 @@ template <typename ValueT>
 struct Type2RowInputs
 {
     const std::vector<OperatorTerm_t>& terms;
+    const TermMasks& masks;
     const bitset_map_namespace::BitsetHashMapWrapper& subspace;
     const Type2GroupTable& table;
     const SubspaceEntry* __restrict bitsets;
@@ -782,22 +784,7 @@ inline bool type2_standard_element(const Type2RowInputs<ValueT>& inputs,
         return false;
     }
 
-    value = 0;
-    for(std::size_t idx = first_term; idx < stop_term; idx++)
-    {
-        const OperatorTerm_t* term = &inputs.terms[idx];
-        if(passes_proj_validation(term, row))
-        {
-            accum_element(row,
-                          col_vec,
-                          term->indices,
-                          term->values,
-                          term->coeff,
-                          term->real_phase,
-                          term->indices.size(),
-                          value);
-        }
-    }
+    value = term_sum<ValueT>(inputs.masks, first_term, stop_term, row.m_bits.data());
     return std::abs(value) > ATOL;
 }
 

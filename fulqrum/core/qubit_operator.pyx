@@ -242,7 +242,8 @@ cdef class QubitOperator():
         """
         if self.size() == 0:
             return 0
-        self.oper.group_sort()
+        if not self.oper.sorted:
+            self.oper.group_sort()
         return self.oper.group_ptrs().size() - 1
 
     @property

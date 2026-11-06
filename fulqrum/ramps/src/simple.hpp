@@ -40,8 +40,18 @@ double simple_restricted(const QubitOperator& oper,
                          const unsigned int ladder_offset,
                          const double target_energy,
                          const unsigned int max_recursion,
-                         const double tol)
+                         const double tol,
+                         const TermMasks* prepared_masks = nullptr,
+                         const TermMasks* prepared_diag_masks = nullptr)
 {
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(oper.terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+    const TermMasks owned_diag_masks =
+        prepared_diag_masks ? TermMasks{}
+                            : build_term_masks(diag_oper.terms, words_for_width(width));
+    const TermMasks& diag_masks = prepared_diag_masks ? *prepared_diag_masks : owned_diag_masks;
+
     std::size_t recur, kk, current;
     // do stuff if the diagonal can be evaluated quickly
     bool do_fast_diag = fast_diag_compatible(diag_oper);
@@ -72,12 +82,10 @@ double simple_restricted(const QubitOperator& oper,
     double col_energy = 0;
     double energy_amp = 0;
 
-    const OperatorTerm_t* term;
     boost::dynamic_bitset<std::size_t> col_vec;
     const std::vector<width_t>* group_inds;
     std::size_t* col_ptr;
     std::size_t* out_col_ptr;
-    std::size_t idx;
     std::size_t group;
     std::size_t group_int_start, group_int_stop;
     std::size_t num_inserted_bitsets = 1;
@@ -103,19 +111,17 @@ double simple_restricted(const QubitOperator& oper,
         std::vector<std::vector<Candidate>> pending_candidates(current_rows.size());
 // Loop over all rows in the current set
 #pragma omp parallel for private(col_vec,                                                          \
-                                 group_inds,                                                       \
-                                 col_ptr,                                                          \
-                                 out_col_ptr,                                                      \
-                                 idx,                                                              \
-                                 group,                                                            \
-                                 group_int_start,                                                  \
-                                 group_int_stop,                                                   \
-                                 val,                                                              \
-                                 row_int,                                                          \
-                                 do_col_search,                                                    \
-                                 col_energy,                                                       \
-                                 energy_amp,                                                       \
-                                 term) schedule(guided)
+                                     group_inds,                                                   \
+                                     col_ptr,                                                      \
+                                     out_col_ptr,                                                  \
+                                     group,                                                        \
+                                     group_int_start,                                              \
+                                     group_int_stop,                                               \
+                                     val,                                                          \
+                                     row_int,                                                      \
+                                     do_col_search,                                                \
+                                     col_energy,                                                   \
+                                     energy_amp) schedule(guided)
         for(kk = 0; kk < current_rows.size(); kk++)
         {
             const boost::dynamic_bitset<size_t>& row = input_bitsets[current_rows[kk]].first;
@@ -131,7 +137,7 @@ double simple_restricted(const QubitOperator& oper,
             std::vector<width_t> row_occ;
             if(do_fast_diag)
             {
-                single_bitstring_diagonal_fast(row, diag_oper.terms, row_ptrs, e_row);
+                single_bitstring_diagonal_fast(row, diag_masks, row_ptrs, e_row);
                 row_occ = set_bit_indices(row);
             }
 
@@ -187,35 +193,14 @@ double simple_restricted(const QubitOperator& oper,
                     continue;
                 }
 
-                do_col_search = 1;
-                val = 0;
-                // begin loop over terms in this group
-                for(idx = group_int_start; idx < group_int_stop; idx++)
-                {
-                    if(do_col_search)
-                    {
-                        col_vec = row;
-                        flip_bits(col_vec, group_inds->data(), group_inds->size());
-                        col_ptr = restricted_subspace.get_ptr(col_vec);
-                        if(col_ptr == nullptr)
-                        {
-                            break; // column is NOT in the subspace so break group
-                        }
-                        do_col_search = 0;
-                    }
-                    term = &oper.terms[idx];
-                    if(passes_proj_validation(term, row))
-                    {
-                        accum_element(row,
-                                      col_vec,
-                                      term->indices,
-                                      term->values,
-                                      term->coeff,
-                                      term->real_phase,
-                                      term->indices.size(),
-                                      val);
-                    }
-                } // end loop over terms in this group
+                col_vec = row;
+                flip_bits(col_vec, group_inds->data(), group_inds->size());
+                col_ptr = restricted_subspace.get_ptr(col_vec);
+                do_col_search = col_ptr == nullptr;
+                val = do_col_search
+                          ? std::complex<double>(0)
+                          : term_sum<std::complex<double>>(
+                                masks, group_int_start, group_int_stop, row.m_bits.data());
 
                 if(!do_col_search)
                 {
@@ -227,7 +212,7 @@ double simple_restricted(const QubitOperator& oper,
                         col_energy = single_bitstring_diagonal_delta_fast(row,
                                                                           col_vec,
                                                                           row_occ,
-                                                                          diag_oper.terms,
+                                                                          diag_masks,
                                                                           row_ptrs,
                                                                           group_inds->data(),
                                                                           group_inds->size(),
@@ -236,7 +221,7 @@ double simple_restricted(const QubitOperator& oper,
                     else
                     {
                         single_bitstring_diagonal(
-                            input_bitsets[*col_ptr].first, diag_oper.terms, col_energy);
+                            input_bitsets[*col_ptr].first, diag_masks, col_energy);
                     }
                     energy_amp = current_prefactors[kk] * std::pow(std::abs(val), 2) /
                                  (target_energy - col_energy + 1e-15);

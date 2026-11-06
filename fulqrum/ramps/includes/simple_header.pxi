@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 from libcpp.vector cimport vector
+from ..core.element_evaluator cimport TermMasks
 from ..core.bitset cimport bitset_t
 from ..core.bitset_hashmap cimport BitsetHashMapWrapper
 from ..core.constants cimport width_t
@@ -34,4 +35,6 @@ cdef extern from "../src/simple.hpp":
                              const unsigned int ladder_offset,
                              const double target_energy,
                              const unsigned int max_recursion,
-                             const double tol) nogil
+                             const double tol,
+                             const TermMasks* prepared_masks,
+                             const TermMasks* prepared_diag_masks) except + nogil

@@ -172,3 +172,9 @@ fulqrum/utils/*.cpp
 mainNotes.bib
 /docs/stubs
 /.benchmarks
+
+fulqrum/gpu/common/*.cpp
+fulqrum/gpu/distributed/*.cpp
+fulqrum/gpu/full_strs/*.cpp
+fulqrum/gpu/rdm/*.cpp
+fulqrum/gpu/eigensolver/_primme_mpi.cpp

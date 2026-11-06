@@ -13,162 +13,152 @@
 """Fulqrum : A generalized framework for quantum subspace diagonalization"""
 
 import os
+from pathlib import Path
 import sys
-import setuptools
-from setuptools.command.build_ext import build_ext
 
 import numpy as np
+import setuptools
 from Cython.Build import cythonize
+from setuptools.command.build import build
+from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 
-DOCLINES = __doc__.split("\n")
-DESCRIPTION = DOCLINES[0]
-
-# read the contents of the README file
-from pathlib import Path
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
-
-n_parallel_threads = int(os.environ.get("FQ_BUILD_PARALLEL", "1"))
-using_inplace = "--inplace" in sys.argv
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gpu_build  # noqa: E402
 
 
-class ParallelBuildExt(build_ext):
-    def build_extensions(self):
-        self.parallel = n_parallel_threads
-        build_ext.build_extensions(self)
+class FulqrumBuild(build):
+    """Keep CPU and GPU artifacts separate when rebuilding the same checkout."""
+
+    def finalize_options(self):
+        super().finalize_options()
+        variant = (
+            "gpu"
+            if gpu_build.gpu_enabled()
+            else ("primme" if gpu_build.primme_mpi_enabled() else "cpu")
+        )
+        self.build_purelib += f"-{variant}"
+        self.build_platlib += f"-{variant}"
+        self.build_lib += f"-{variant}"
+        self.build_temp += f"-{variant}"
 
 
-ROOT = "fulqrum"
+class FulqrumBuildExt(build_ext):
+    """Defer PRIMME and CUDA builds until build_ext runs."""
 
-with open("requirements.txt") as f:
-    REQUIREMENTS = f.read().splitlines()
+    def run(self):
+        self.parallel = gpu_build.build_parallelism()
+        if gpu_build.primme_mpi_enabled():
+            gpu_build.prepare_native_build(self)
+        if self.inplace:
+            gpu_build.prune_inplace_native(self.extensions)
+        generated = cythonize(
+            self.extensions,
+            build_dir=str(Path(self.build_temp) / "cython"),
+            nthreads=0 if self.inplace else self.parallel,
+            language_level=3,
+            compiler_directives={"embedsignature": True},
+        )
+        generated_root = Path(self.build_temp) / "cython"
+        for header in generated_root.rglob("*.hpp"):
+            original = gpu_build.ROOT / header.relative_to(generated_root)
+            if original.is_file():
+                forwarding = '#include "' + original.as_posix() + '"\n'
+                if header.read_text() != forwarding:
+                    header.write_text(forwarding)
 
-PACKAGES = setuptools.find_packages()
-PACKAGE_DATA = {
-    f"{ROOT}/core": ["*.pxd"],
-    f"{ROOT}/core/src": ["*.hpp"],
-    f"{ROOT}/include": ["*.hpp"],
-}
+        originals = {extension.name: extension for extension in self.extensions}
+        for extension in generated:
+            originals[extension.name].__dict__.update(extension.__dict__)
+        super().run()
 
-CYTHON_EXTS = [
-    "subspace",
-    "bitset",
-    "bitset_view",
-    "qubit_operator",
-    "fermi_operator",
-    "spmv",
-    "csr",
-    "csrlike",
-    "constants",
-    "qiskit",
-    "integrals",
-    "openfermion",
-    "matrix",
-    "sqd",
-    "simple",
-    "open",
+
+class FulqrumSdist(sdist):
+    """Ship original pinned PRIMME sources even if the submodule is dirty."""
+
+    def make_release_tree(self, base_dir, files):
+        super().make_release_tree(base_dir, files)
+        source = Path(base_dir) / "third-party/primme"
+        if not (gpu_build.ROOT / "third-party/primme/include/primme.h").is_file():
+            raise RuntimeError(
+                "A source distribution requires the pinned PRIMME sources; initialize third-party/primme first"
+            )
+        if (gpu_build.ROOT / "third-party/primme/include/primme.h").is_file():
+            for path in source.rglob("*"):
+                if path.is_file():
+                    path.unlink()
+            gpu_build.copy_primme_sources(source)
+
+
+CPU_MODULES = [
+    "core.subspace",
+    "core.bitset",
+    "core.bitset_view",
+    "core.qubit_operator",
+    "core.fermi_operator",
+    "core.spmv",
+    "core.csr",
+    "core.csrlike",
+    "core.constants",
+    "convert.qiskit",
+    "convert.integrals",
+    "convert.openfermion",
+    "utils.matrix",
+    "core.sqd",
+    "ramps.simple",
+    "ramps.open",
+]
+INCLUDE_DIRS = [np.get_include(), "fulqrum/include", "qiskit-addon-sqd-hpc/include"]
+COMPILE_ARGS = ["-O3", "-std=c++17", "-fopenmp"]
+LINK_ARGS = ["-fopenmp"]
+DEFINE_MACROS = [
+    ("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"),
+    ("BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS", None),
 ]
 
-CYTHON_MODULES = [
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.core",
-    f"{ROOT}.convert",
-    f"{ROOT}.convert",
-    f"{ROOT}.convert",
-    f"{ROOT}.utils",
-    f"{ROOT}.core",
-    f"{ROOT}.ramps",
-    f"{ROOT}.ramps",
-]
-CYTHON_SOURCE_DIRS = [
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/core",
-    f"{ROOT}/convert",
-    f"{ROOT}/convert",
-    f"{ROOT}/convert",
-    f"{ROOT}/utils",
-    f"{ROOT}/core",
-    f"{ROOT}/ramps",
-    f"{ROOT}/ramps",
-]
-
-# Add openmp flags
-OPTIONAL_FLAGS = []
-OPTIONAL_ARGS = []
-# Extra link args
-LINK_FLAGS = []
-COMPILER_FLAGS = ["-O3", "-std=c++17"]
-
-
-OPTIONAL_FLAGS = ["-fopenmp"]
-OPTIONAL_ARGS.append("-fopenmp")
-
-if os.getenv("FQ_ARCH", False) and sys.platform != "win32":
-    if sys.platform == "darwin":
-        # This is needed to set the flag for ARM processors on OSX
-        # M1 = apple-a14, M2 = apple-a15, M3 = apple-a16, M4 = apple-m4
-        OPTIONAL_FLAGS.append("-mcpu=" + os.getenv("FQ_ARCH"))
-    else:
-        OPTIONAL_FLAGS.append("-march=" + os.getenv("FQ_ARCH"))
-        OPTIONAL_FLAGS.append("-mtune=" + os.getenv("FQ_ARCH"))
-
-if os.getenv("FQ_TBB", False):
-    LINK_FLAGS.append('-ltbb')
-    COMPILER_FLAGS.append("-DFQ_TBB")
-
-INCLUDE_DIRS = [np.get_include()] + [
-    "fulqrum/include",
-    "qiskit-addon-sqd-hpc/include",
-]
-
-if os.getenv("FQ_DEBUG", "0") == "1":
-    COMPILER_FLAGS.append("-D_GLIBCXX_ASSERTIONS")
-
-EXT_MODULES = []
-# Add Cython Extensions
-for idx, ext in enumerate(CYTHON_EXTS):
-    mod = setuptools.Extension(
-        CYTHON_MODULES[idx] + "." + ext,
-        sources=[CYTHON_SOURCE_DIRS[idx] + "/" + ext + ".pyx"],
-        include_dirs=INCLUDE_DIRS,
-        extra_compile_args=COMPILER_FLAGS + OPTIONAL_FLAGS,
-        extra_link_args=LINK_FLAGS + OPTIONAL_ARGS,
-        language="c++",
-        define_macros=[
-            ("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"),
-            ("BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS", None),
-        ],
+architecture = os.environ.get("FQ_ARCH")
+if architecture and sys.platform != "win32":
+    COMPILE_ARGS += (
+        [f"-mcpu={architecture}"]
+        if sys.platform == "darwin"
+        else [f"-march={architecture}", f"-mtune={architecture}"]
     )
-    EXT_MODULES.append(mod)
+if gpu_build.env_flag("FQ_TBB"):
+    DEFINE_MACROS.append(("FQ_TBB", "1"))
+    LINK_ARGS.append("-ltbb")
+if gpu_build.env_flag("FQ_DEBUG"):
+    DEFINE_MACROS.append(("_GLIBCXX_ASSERTIONS", None))
 
-
-setuptools.setup(
-    install_requires=REQUIREMENTS,
-    package_data=PACKAGE_DATA,
-    packages=PACKAGES,
-    description=DESCRIPTION,
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    ext_modules=cythonize(
-        EXT_MODULES,
-        nthreads=0 if using_inplace else n_parallel_threads,  # to avoid race condition
-        language_level=3,
-        force=True,
-        compiler_directives={"embedsignature": True},
-    ),
-    cmdclass={"build_ext": ParallelBuildExt},
+EXTENSIONS = [
+    setuptools.Extension(
+        f"fulqrum.{module}",
+        sources=[f"fulqrum/{module.replace('.', '/')}.pyx"],
+        include_dirs=list(INCLUDE_DIRS)
+        + [
+            str(gpu_build.ROOT / "fulqrum/core/src"),
+            str(gpu_build.ROOT / f"fulqrum/{module.split('.')[0]}/src"),
+        ],
+        extra_compile_args=list(COMPILE_ARGS),
+        extra_link_args=list(LINK_ARGS),
+        define_macros=list(DEFINE_MACROS),
+        language="c++",
+    )
+    for module in CPU_MODULES
+]
+EXTENSIONS += gpu_build.gpu_extensions(
+    "fulqrum",
+    INCLUDE_DIRS,
+    COMPILE_ARGS,
+    LINK_ARGS,
+    DEFINE_MACROS,
 )
+
+if __name__ == "__main__":
+    setuptools.setup(
+        ext_modules=EXTENSIONS,
+        cmdclass={
+            "build": FulqrumBuild,
+            "build_ext": FulqrumBuildExt,
+            "sdist": FulqrumSdist,
+        },
+    )

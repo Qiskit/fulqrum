@@ -33,10 +33,10 @@ cdef extern from "../src/csrlike.hpp":
         vector[vector[long long ]] cols
         vector[vector[complex]] data
 
-    void set_csr_ptr[T, U](const vector[vector[T]]& cols, U * ptrs)
+    void set_csr_ptr[T, U](const vector[vector[T]]& cols, U * ptrs) except +
 
     void set_csr_data[T, U, V](const vector[vector[T]]& in_data, const vector[vector[U]]& cols,
-                               V * ptrs, V * inds, T * out_data)
+                               V * ptrs, V * inds, T * out_data) except +
 
     void csrlike_spmv[T, U](const vector[vector[T]]& data, const vector[vector[U]]& cols,
                             const T * vec, T * out, U dim)

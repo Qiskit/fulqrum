@@ -16,10 +16,12 @@
 #include <cstdlib>
 #include <vector>
 
+#include "checked_size.hpp"
 #include "base.hpp"
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
 #include "constants.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include "offdiag_grouping.hpp"
 #include <boost/dynamic_bitset.hpp>
@@ -37,10 +39,17 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
                         T* __restrict indptr,
                         T* __restrict indices,
                         U* __restrict data,
-                        const int compute_values)
+                        const int compute_values,
+                        const TermMasks* prepared_masks = nullptr)
 {
+    if(subspace_dim) checked_index<T>(subspace_dim - 1);
+    checked_add(subspace_dim, 1);
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{} : build_term_masks(terms, words_for_width(width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
+
     std::size_t kk;
-    T temp, _sum;
+    std::size_t temp, _sum;
 
     const auto* bitsets = subspace.get_bitsets();
 
@@ -76,7 +85,7 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
     const std::size_t num_blocks = (subspace_dim + BLK - 1) / BLK;
 
     // a vector containing the NNZ per row of the matrix
-    std::vector<T> row_nnz_s(subspace_dim, 0);
+    std::vector<std::size_t> row_nnz_s(subspace_dim, 0);
 #pragma omp parallel if(subspace_dim > 4096)
     {
         // do diagonal first, if any
@@ -85,7 +94,7 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
 #pragma omp for
             for(kk = 0; kk < subspace_dim; kk++)
             {
-                T& row_nnz = row_nnz_s[kk]; // reference T& is critical
+                std::size_t& row_nnz = row_nnz_s[kk]; // reference T& is critical
                 T& elem_start = indptr[kk];
                 if(diag_vec[kk] != 0.0)
                 {
@@ -115,7 +124,7 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
             // Build the bit-vector for every row in the block.
             // Stored contiguously as bn * rsb_w bytes so the
             // group loop can stride over rows cheaply.
-            rsb_buf.assign(bn * rsb_w, 0);
+            rsb_buf.assign(checked_multiply(bn, rsb_w), 0);
             for(std::size_t row_in_block = 0; row_in_block < bn; ++row_in_block)
             {
                 const boost::dynamic_bitset<std::size_t>& row = bitsets[r0 + row_in_block].first;
@@ -161,22 +170,8 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
                     if(col_ptr == nullptr)
                         continue;
                     const std::size_t col_idx = *col_ptr;
-                    U val = 0;
-                    for(std::size_t idx = group_start; idx < group_stop; idx++)
-                    { // begin loop over terms in this group
-                        const OperatorTerm_t* term = &terms[idx];
-                        if(passes_proj_validation(term, row))
-                        {
-                            accum_element(row,
-                                          col_vec,
-                                          term->indices,
-                                          term->values,
-                                          term->coeff,
-                                          term->real_phase,
-                                          term->indices.size(),
-                                          val);
-                        }
-                    } // end loop over terms in this group
+                    U val = term_sum<U>(masks, group_start, group_stop, row.m_bits.data());
+
                     if(std::abs(val) > ATOL)
                     {
                         if(compute_values)
@@ -225,11 +220,11 @@ void csr_matrix_builder(const std::vector<OperatorTerm_t>& terms,
         _sum = 0;
         for(kk = 0; kk < (subspace_dim); kk++)
         {
-            temp = _sum + row_nnz_s[kk];
-            indptr[kk] = _sum;
+            temp = checked_add(_sum, static_cast<std::size_t>(row_nnz_s[kk]));
+            indptr[kk] = checked_index<T>(_sum);
             _sum = temp;
         }
-        indptr[subspace_dim] = _sum;
+        indptr[subspace_dim] = checked_index<T>(_sum);
     }
 }
 

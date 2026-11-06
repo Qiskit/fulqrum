@@ -19,8 +19,10 @@
 #include <vector>
 
 #include "base.hpp"
+#include "checked_size.hpp"
 #include "bitset_hashmap.hpp"
 #include "bitset_utils.hpp"
+#include "element_evaluator.hpp"
 #include "elements.hpp"
 #include <boost/dynamic_bitset.hpp>
 
@@ -39,9 +41,14 @@ template <typename T>
 inline void compute_diag_vector(const bitset_map_namespace::BitsetHashMapWrapper& data,
                                 T* __restrict diag_vec,
                                 const QubitOperator& diag_oper,
-                                const std::size_t subspace_dim)
+                                const std::size_t subspace_dim,
+                                const TermMasks* prepared_masks = nullptr)
 {
     std::size_t kk;
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{}
+                       : build_term_masks(diag_oper.terms, words_for_width(diag_oper.width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
     const auto* bitsets = data.get_bitsets();
 
 #pragma omp parallel for if(subspace_dim > 4096)
@@ -49,7 +56,7 @@ inline void compute_diag_vector(const bitset_map_namespace::BitsetHashMapWrapper
     {
         T val = 0;
         const boost::dynamic_bitset<size_t>& row = bitsets[kk].first;
-        single_bitstring_diagonal(row, diag_oper.terms, val);
+        val = term_sum<T>(masks, 0, masks.real_values.size(), row.m_bits.data());
         diag_vec[kk] += val; // += here since const_energy (if any) is already included in diag
     }
 }
@@ -67,21 +74,8 @@ inline void single_bitstring_diagonal(const boost::dynamic_bitset<size_t>& row,
                                       const std::vector<OperatorTerm>& diag_terms,
                                       T& val)
 {
-    val = 0;
-    const std::size_t num_terms = diag_terms.size();
-    const OperatorTerm_t* term;
-    width_t weight;
-    std::size_t ll;
-    for(ll = 0; ll < num_terms; ll++)
-    {
-        term = &diag_terms[ll];
-        weight = term->indices.size();
-        if(passes_proj_validation(term, row))
-        {
-            accum_element(
-                row, row, term->indices, term->values, term->coeff, term->real_phase, weight, val);
-        }
-    }
+    const TermMasks masks = build_term_masks(diag_terms, row.num_blocks());
+    val = term_sum<T>(masks, 0, diag_terms.size(), row.m_bits.data());
 }
 
 /**
@@ -102,7 +96,7 @@ inline bool fast_diag_compatible(const QubitOperator& oper)
         out = false;
     }
     // Number of non-constant terms in diag must be W * (W + 1) / 2
-    else if(oper.size() != static_cast<std::size_t>(oper.width * (oper.width + 1) / 2))
+    else if(oper.size() != static_cast<std::size_t>(oper.width) * (static_cast<std::size_t>(oper.width) + 1) / 2)
     {
         out = false;
     }
@@ -236,14 +230,12 @@ inline void fast_diag_term_sort(QubitOperator& oper)
  */
 template <typename T>
 inline void single_bitstring_diagonal_fast(const boost::dynamic_bitset<size_t>& row,
-                                           const std::vector<OperatorTerm>& diag_terms,
+                                           const TermMasks& masks,
                                            const std::vector<std::size_t>& row_ptrs,
                                            T& val)
 {
     val = 0;
     //const std::size_t num_terms = diag_terms.size();
-    const OperatorTerm* term;
-    width_t weight;
     std::size_t start, offset;
 
     std::vector<width_t> set_bits = set_bit_indices(row);
@@ -255,10 +247,7 @@ inline void single_bitstring_diagonal_fast(const boost::dynamic_bitset<size_t>& 
         for(std::size_t mm = ll; mm < set_bits.size(); mm++)
         {
             offset = set_bits[mm] - current_bit;
-            term = &diag_terms[start + offset];
-            weight = term->indices.size();
-            accum_element(
-                row, row, term->indices, term->values, term->coeff, term->real_phase, weight, val);
+            val += term_sum<T>(masks, start + offset, start + offset + 1, row.m_bits.data());
         }
     }
 }
@@ -312,7 +301,7 @@ template <typename T>
 inline T single_bitstring_diagonal_delta_fast(const boost::dynamic_bitset<size_t>& row,
                                               const boost::dynamic_bitset<size_t>& col,
                                               const std::vector<width_t>& row_occ,
-                                              const std::vector<OperatorTerm>& diag_terms,
+                                              const TermMasks& masks,
                                               const std::vector<std::size_t>& row_ptrs,
                                               const width_t* flip_inds,
                                               const unsigned int nflip,
@@ -321,17 +310,8 @@ inline T single_bitstring_diagonal_delta_fast(const boost::dynamic_bitset<size_t
     auto g = [&](width_t a, width_t b, const boost::dynamic_bitset<size_t>& det) -> T {
         const width_t lo = a < b ? a : b;
         const width_t hi = a < b ? b : a;
-        const OperatorTerm* term = &diag_terms[row_ptrs[lo] + (hi - lo)];
-        T v = 0;
-        accum_element(det,
-                      det,
-                      term->indices,
-                      term->values,
-                      term->coeff,
-                      term->real_phase,
-                      term->indices.size(),
-                      v);
-        return v;
+        const std::size_t index = row_ptrs[lo] + (hi - lo);
+        return term_sum<T>(masks, index, index + 1, det.m_bits.data());
     };
 
     // Split flips into positions added (0->1) and removed (1->0) going row -> col.
@@ -417,10 +397,15 @@ template <typename T>
 inline void compute_diag_vector_fast(const bitset_map_namespace::BitsetHashMapWrapper& data,
                                      T* __restrict diag_vec,
                                      const QubitOperator& diag_oper,
-                                     const std::size_t subspace_dim)
+                                     const std::size_t subspace_dim,
+                                     const TermMasks* prepared_masks = nullptr)
 {
     std::size_t kk;
     width_t width = diag_oper.width;
+    const TermMasks owned_masks =
+        prepared_masks ? TermMasks{}
+                       : build_term_masks(diag_oper.terms, words_for_width(diag_oper.width));
+    const TermMasks& masks = prepared_masks ? *prepared_masks : owned_masks;
     const auto* bitsets = data.get_bitsets();
 
     // set row_pointers
@@ -439,7 +424,312 @@ inline void compute_diag_vector_fast(const bitset_map_namespace::BitsetHashMapWr
     {
         T val = 0;
         const boost::dynamic_bitset<size_t>& row = bitsets[kk].first;
-        single_bitstring_diagonal_fast(row, diag_oper.terms, row_ptrs, val);
+        single_bitstring_diagonal_fast(row, masks, row_ptrs, val);
         diag_vec[kk] += val; // += here since const_energy (if any) is already included in diag
     }
+}
+
+template <typename T>
+inline void
+single_bitstring_diagonal(const boost::dynamic_bitset<size_t>& row, const TermMasks& masks, T& val)
+{
+    val = term_sum<T>(masks, 0, masks.real_values.size(), row.m_bits.data());
+}
+
+template <typename T>
+inline void single_bitstring_diagonal_fast(const boost::dynamic_bitset<size_t>& row,
+                                           const std::vector<OperatorTerm>& diag_terms,
+                                           const std::vector<std::size_t>& row_ptrs,
+                                           T& val)
+{
+    const TermMasks masks = build_term_masks(diag_terms, row.num_blocks());
+    single_bitstring_diagonal_fast(row, masks, row_ptrs, val);
+}
+
+template <typename T>
+inline T single_bitstring_diagonal_delta_fast(const boost::dynamic_bitset<size_t>& row,
+                                              const boost::dynamic_bitset<size_t>& col,
+                                              const std::vector<width_t>& row_occ,
+                                              const std::vector<OperatorTerm>& diag_terms,
+                                              const std::vector<std::size_t>& row_ptrs,
+                                              const width_t* flip_inds,
+                                              const unsigned int nflip,
+                                              const T e_row)
+{
+    const TermMasks masks = build_term_masks(diag_terms, row.num_blocks());
+    return single_bitstring_diagonal_delta_fast(
+        row, col, row_occ, masks, row_ptrs, flip_inds, nflip, e_row);
+}
+
+/**
+ * Count "cross" terms (those touching both alpha and beta halves) in a diagonal
+ * operator. Used by the BLAS path to size the factor buffers before calling
+ * compute_diag_factors().
+ */
+inline std::size_t count_diag_cross_terms(const QubitOperator& diag_oper,
+                                          const unsigned int num_alpha)
+{
+    std::size_t n_cross = 0;
+    for(const auto& term : diag_oper.terms)
+    {
+        bool has_alpha = false, has_beta = false;
+        for(auto idx : term.indices)
+            (idx < num_alpha) ? (has_alpha = true) : (has_beta = true);
+        for(auto idx : term.proj_indices)
+            (idx < num_alpha) ? (has_alpha = true) : (has_beta = true);
+        if(has_alpha && has_beta)
+            ++n_cross;
+    }
+    return n_cross;
+}
+
+/**
+ * Compute the four factor arrays of the product-space diagonal decomposition.
+ */
+template <typename T>
+inline void compute_diag_factors(const unsigned long long* __restrict alpha_uint,
+                                 const unsigned long long* __restrict beta_uint,
+                                 const QubitOperator& diag_oper,
+                                 const unsigned int num_alpha,
+                                 const std::size_t a0,
+                                 const std::size_t a1,
+                                 const std::size_t n_b,
+                                 T* __restrict d_alpha_out,
+                                 T* __restrict d_beta_out,
+                                 T* __restrict Fc_out,
+                                 T* __restrict G_out)
+{
+    if(a0 > a1) throw std::invalid_argument("Invalid diagonal alpha range.");
+    const std::size_t na_local = a1 - a0;
+    const std::size_t n_terms = diag_oper.terms.size();
+    const std::size_t cross_count = count_diag_cross_terms(diag_oper, num_alpha);
+    if(Fc_out != nullptr) checked_multiply(checked_multiply(na_local, cross_count), sizeof(T));
+    if(G_out != nullptr) checked_multiply(checked_multiply(n_b, cross_count), sizeof(T));
+
+    struct HalfInfo
+    {
+        std::vector<unsigned int> inds;
+        std::vector<unsigned char> vals;
+        std::vector<unsigned int> proj_inds;
+        std::vector<unsigned int> proj_bits;
+    };
+    struct CrossTermInfo
+    {
+        double weighted_coeff;
+        HalfInfo alpha_part;
+        HalfInfo beta_part;
+    };
+
+    std::vector<std::size_t> alpha_term_idx, beta_term_idx;
+    std::vector<CrossTermInfo> cross_terms;
+    cross_terms.reserve(n_terms);
+
+    for(std::size_t t = 0; t < n_terms; t++)
+    {
+        const auto& term = diag_oper.terms[t];
+        bool has_alpha = false, has_beta = false;
+        for(auto idx : term.indices)
+            (idx < num_alpha) ? (has_alpha = true) : (has_beta = true);
+        for(auto idx : term.proj_indices)
+            (idx < num_alpha) ? (has_alpha = true) : (has_beta = true);
+
+        if(!has_beta)
+        {
+            alpha_term_idx.push_back(t);
+        }
+        else if(!has_alpha)
+        {
+            beta_term_idx.push_back(t);
+        }
+        else
+        {
+            CrossTermInfo ct;
+            ct.weighted_coeff = term.coeff.real() * static_cast<double>(term.real_phase);
+            for(std::size_t k = 0; k < term.indices.size(); k++)
+            {
+                unsigned int idx = term.indices[k];
+                unsigned char v = term.values[k];
+                if(idx < num_alpha)
+                {
+                    ct.alpha_part.inds.push_back(idx);
+                    ct.alpha_part.vals.push_back(v);
+                }
+                else
+                {
+                    ct.beta_part.inds.push_back(idx - num_alpha);
+                    ct.beta_part.vals.push_back(v);
+                }
+            }
+            for(std::size_t k = 0; k < term.proj_indices.size(); k++)
+            {
+                unsigned int idx = term.proj_indices[k];
+                unsigned int bit = term.proj_bits[k];
+                if(idx < num_alpha)
+                {
+                    ct.alpha_part.proj_inds.push_back(idx);
+                    ct.alpha_part.proj_bits.push_back(bit);
+                }
+                else
+                {
+                    ct.beta_part.proj_inds.push_back(idx - num_alpha);
+                    ct.beta_part.proj_bits.push_back(bit);
+                }
+            }
+            cross_terms.push_back(std::move(ct));
+        }
+    }
+
+    const std::size_t n_cross = cross_terms.size();
+
+    auto eval_half = [](unsigned long long bits, const HalfInfo& hi) -> double {
+        for(std::size_t k = 0; k < hi.proj_inds.size(); k++)
+        {
+            if(((bits >> hi.proj_inds[k]) & 1u) != hi.proj_bits[k])
+                return 0.0;
+        }
+        double prod = 1.0;
+        for(std::size_t k = 0; k < hi.inds.size(); k++)
+        {
+            unsigned int bit = (bits >> hi.inds[k]) & 1u;
+            prod *= REAL_OPER_ELEMENTS[4u * hi.vals[k] + 3u * bit];
+        }
+        return prod;
+    };
+
+#pragma omp parallel for schedule(static)
+    for(std::size_t ia = 0; ia < na_local; ia++)
+    {
+        const unsigned long long a_bits = alpha_uint[a0 + ia];
+        double da = 0.0;
+        for(std::size_t ti : alpha_term_idx)
+        {
+            const auto& term = diag_oper.terms[ti];
+            bool pass = true;
+            for(std::size_t k = 0; k < term.proj_indices.size(); k++)
+            {
+                if(((a_bits >> term.proj_indices[k]) & 1u) != (unsigned int)term.proj_bits[k])
+                {
+                    pass = false;
+                    break;
+                }
+            }
+            if(!pass)
+                continue;
+            double prod = 1.0;
+            for(std::size_t k = 0; k < term.indices.size(); k++)
+            {
+                unsigned int bit = (a_bits >> term.indices[k]) & 1u;
+                prod *= REAL_OPER_ELEMENTS[4u * term.values[k] + 3u * bit];
+            }
+            da += static_cast<double>(term.real_phase) * term.coeff.real() * prod;
+        }
+        d_alpha_out[ia] = static_cast<T>(da);
+        if(n_cross > 0 && Fc_out != nullptr)
+        {
+            T* fc_row = Fc_out + ia * n_cross;
+            for(std::size_t ct = 0; ct < n_cross; ct++)
+                fc_row[ct] = static_cast<T>(cross_terms[ct].weighted_coeff *
+                                            eval_half(a_bits, cross_terms[ct].alpha_part));
+        }
+    }
+
+#pragma omp parallel for schedule(static)
+    for(std::size_t ib = 0; ib < n_b; ib++)
+    {
+        const unsigned long long b_bits = beta_uint[ib];
+        double db = 0.0;
+        for(std::size_t ti : beta_term_idx)
+        {
+            const auto& term = diag_oper.terms[ti];
+            bool pass = true;
+            for(std::size_t k = 0; k < term.proj_indices.size(); k++)
+            {
+                unsigned int shifted = term.proj_indices[k] - num_alpha;
+                if(((b_bits >> shifted) & 1u) != (unsigned int)term.proj_bits[k])
+                {
+                    pass = false;
+                    break;
+                }
+            }
+            if(!pass)
+                continue;
+            double prod = 1.0;
+            for(std::size_t k = 0; k < term.indices.size(); k++)
+            {
+                unsigned int bit = (b_bits >> (term.indices[k] - num_alpha)) & 1u;
+                prod *= REAL_OPER_ELEMENTS[4u * term.values[k] + 3u * bit];
+            }
+            db += static_cast<double>(term.real_phase) * term.coeff.real() * prod;
+        }
+        d_beta_out[ib] = static_cast<T>(db);
+        if(n_cross > 0 && G_out != nullptr)
+        {
+            T* g_row = G_out + ib * n_cross;
+            for(std::size_t ct = 0; ct < n_cross; ct++)
+                g_row[ct] = static_cast<T>(eval_half(b_bits, cross_terms[ct].beta_part));
+        }
+    }
+}
+
+
+template <typename T>
+inline bool compute_diag_cross_factors(const QubitOperator& diag_oper,
+                                       const unsigned int num_alpha,
+                                       const unsigned int num_beta,
+                                       T* __restrict V_out,
+                                       T* __restrict da_lin_out,
+                                       T* __restrict db_lin_out,
+                                       T* __restrict const_out)
+{
+    checked_multiply(checked_multiply(num_alpha, num_beta), sizeof(T));
+    checked_multiply(checked_add(num_alpha, num_beta), sizeof(T));
+
+    double c_accum = 0.0;
+    for(const auto& term : diag_oper.terms)
+    {
+        int a_orb = -1, b_orb = -1;
+        bool a_multi = false, b_multi = false;
+        for(auto idx : term.indices)
+            if(idx < num_alpha) { if(a_orb < 0) a_orb = (int)idx; else if(a_orb != (int)idx) a_multi = true; }
+            else { int q = (int)(idx - num_alpha); if(b_orb < 0) b_orb = q; else if(b_orb != q) b_multi = true; }
+        for(auto idx : term.proj_indices)
+            if(idx < num_alpha) { if(a_orb < 0) a_orb = (int)idx; else if(a_orb != (int)idx) a_multi = true; }
+            else { int q = (int)(idx - num_alpha); if(b_orb < 0) b_orb = q; else if(b_orb != q) b_multi = true; }
+
+        if(a_orb < 0 || b_orb < 0)
+            continue;
+        if(a_multi || b_multi)
+            return false;
+
+        double a0 = 1.0, a1 = 1.0, b0 = 1.0, b1 = 1.0;
+        for(std::size_t k = 0; k < term.proj_indices.size(); k++)
+        {
+            const unsigned int bit = term.proj_bits[k];
+            if(term.proj_indices[k] < num_alpha) { if(bit != 0u) a0 = 0.0; if(bit != 1u) a1 = 0.0; }
+            else { if(bit != 0u) b0 = 0.0; if(bit != 1u) b1 = 0.0; }
+        }
+        for(std::size_t k = 0; k < term.indices.size(); k++)
+        {
+            const unsigned char v = term.values[k];
+            if(term.indices[k] < num_alpha)
+            {
+                a0 *= REAL_OPER_ELEMENTS[4u * v + 3u * 0u];
+                a1 *= REAL_OPER_ELEMENTS[4u * v + 3u * 1u];
+            }
+            else
+            {
+                b0 *= REAL_OPER_ELEMENTS[4u * v + 3u * 0u];
+                b1 *= REAL_OPER_ELEMENTS[4u * v + 3u * 1u];
+            }
+        }
+        const double w = term.coeff.real() * static_cast<double>(term.real_phase);
+        const double A_a = 0.5 * (a0 + a1), B_a = 0.5 * (a0 - a1);
+        const double A_b = 0.5 * (b0 + b1), B_b = 0.5 * (b0 - b1);
+        V_out[(std::size_t)a_orb * num_beta + (unsigned int)b_orb] += static_cast<T>(w * B_a * B_b);
+        da_lin_out[a_orb] += static_cast<T>(w * B_a * A_b);
+        db_lin_out[b_orb] += static_cast<T>(w * A_a * B_b);
+        c_accum += w * A_a * A_b;
+    }
+    *const_out = static_cast<T>(c_accum);
+    return true;
 }
